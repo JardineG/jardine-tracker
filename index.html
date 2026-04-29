@@ -1250,8 +1250,8 @@ function renderGrid(wrapId, habits, sectionType) {
         dayStreakHtml = avg != null ? fmtNum(avg) : '';
       } else if (h.id === 'protein_goal') {
         const wg = state.weeklyGoals[getISOWeek(date)] || {};
-        const below = weekBelowTargetCount('protein_goal', wg.protein, date);
-        dayStreakHtml = below != null ? `${below}/7 ↓` : '';
+        const hit = weekHitTargetCount('protein_goal', wg.protein, date);
+        dayStreakHtml = hit != null ? `${hit}/7 ✓` : '';
       } else if (h.id === 'weight') {
         const r = todayROC();
         if (r && r.roc != null) {
@@ -1353,9 +1353,9 @@ function renderGrid(wrapId, habits, sectionType) {
       streakCellHtml = avg != null ? `<span title="weekly avg">${fmtNum(avg)}</span>` : '—';
     } else if (h.id === 'protein_goal') {
       const wg = state.weeklyGoals[getISOWeek(dates[0])] || {};
-      const below = weekBelowTargetCount('protein_goal', wg.protein, dates[0]);
-      streakCellHtml = below != null
-        ? `<span title="days below target this week" style="color:${below === 0 ? 'var(--green)' : (below >= 3 ? 'var(--red)' : 'inherit')}">${below}/7 ↓</span>`
+      const hit = weekHitTargetCount('protein_goal', wg.protein, dates[0]);
+      streakCellHtml = hit != null
+        ? `<span title="days hit protein target this week" style="color:${hit >= 5 ? 'var(--green)' : (hit <= 2 ? 'var(--red)' : 'inherit')}">${hit}/7 ✓</span>`
         : '—';
     } else if (h.id === 'weight') {
       const r = todayROC();
