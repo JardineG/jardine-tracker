@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>infinite YOU · Places</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #f7f3ec;
+    --panel: #ffffff;
+    --ink: #1f2933;
+    --muted: #6b7280;
+    --line: #e7e1d4;
+    --gold: #c89a3a;
+    --teal: #1f5f5f;
+    --teal-soft: #d8ebe9;
+    --red: #7a2030;
+    --red-soft: #f3dadd;
+    --green: #2d5a3d;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+  }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  .top-nav {
+    display: flex; gap: 4px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--line); flex-wrap: wrap;
+  }
+  .top-nav a {
+    padding: 10px 18px; text-decoration: none; color: var(--muted);
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .top-nav a:hover { color: var(--ink); }
+  .top-nav a.active { color: var(--ink); border-bottom-color: var(--gold); }
+
+  .header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 20px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .brand h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+  .brand h1 span { color: var(--gold); }
+  .brand .sub { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .stat .label { font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .stat .value { font-size: 28px; font-weight: 800; line-height: 1; }
+
+  .add-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; margin-bottom: 20px;
+  }
+  .add-card h3 {
+    margin: 0 0 12px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+  }
+  .add-row { display: grid; grid-template-columns: 2fr 1fr 2fr auto; gap: 10px; align-items: end; }
+  @media (max-width: 760px) { .add-row { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 4px; position: relative; }
+  .field label { font-size: 11px; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+  .field input {
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px;
+    background: #fff; font-family: inherit; color: var(--ink);
+  }
+  .field input:focus { outline: none; border-color: var(--gold); }
+  .btn-primary {
+    padding: 10px 20px; background: var(--gold); color: #fff; border: 0; border-radius: 8px;
+    font-weight: 700; cursor: pointer; font-size: 14px; font-family: inherit;
+    letter-spacing: 0.5px;
+  }
+  .btn-primary:hover { opacity: 0.92; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 500;
+    background: #fff; border: 1px solid var(--line); border-radius: 8px;
+    margin-top: 4px; max-height: 300px; overflow-y: auto;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    display: none;
+  }
+  .suggestions.show { display: block; }
+  .suggestion {
+    padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .suggestion:last-child { border-bottom: 0; }
+  .suggestion:hover { background: var(--bg); }
+  .suggestion .main { font-weight: 600; }
+  .suggestion .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .preview-chip {
+    display: none; gap: 10px; align-items: center; padding: 8px 10px;
+    background: var(--teal-soft); border: 1px solid var(--teal); border-radius: 8px;
+    margin-top: 8px;
+  }
+  .preview-chip.show { display: flex; }
+  .preview-chip .meta { flex: 1; font-size: 13px; }
+  .preview-chip .meta .t { font-weight: 700; color: var(--teal); }
+  .preview-chip .meta .a { color: var(--muted); font-size: 12px; }
+  .preview-chip .clear {
+    background: transparent; border: 0; color: var(--teal); cursor: pointer;
+    font-size: 18px; padding: 0 4px; line-height: 1;
+  }
+
+  /* Map + list layout */
+  .map-layout {
+    display: grid; grid-template-columns: 1fr 320px; gap: 16px; margin-bottom: 16px;
+  }
+  @media (max-width: 900px) {
+    .map-layout { grid-template-columns: 1fr; }
+  }
+  #map {
+    height: 540px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--panel);
+  }
+  @media (max-width: 900px) { #map { height: 380px; } }
+
+  .place-list {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; display: flex; flex-direction: column; max-height: 540px;
+  }
+  .place-list-head {
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
+  .place-list-body { overflow-y: auto; flex: 1; }
+  .place-row {
+    padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer;
+    transition: background 0.1s; position: relative;
+  }
+  .place-row:last-child { border-bottom: 0; }
+  .place-row:hover { background: var(--bg); }
+  .place-row.active { background: var(--teal-soft); }
+  .place-row .name { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .place-row .country { font-size: 12px; color: var(--muted); }
+  .place-row .date { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 0.3px; }
+  .place-row .notes { font-size: 12px; color: var(--ink); margin-top: 6px; font-style: italic; }
+  .place-row .delete {
+    position: absolute; top: 10px; right: 10px;
+    background: transparent; border: 0; color: var(--muted); cursor: pointer;
+    font-size: 16px; padding: 2px 6px; border-radius: 4px;
+    display: none;
+  }
+  .place-row:hover .delete { display: block; }
+  .place-row .delete:hover { background: var(--red-soft); color: var(--red); }
+
+  .empty-list {
+    padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px;
+  }
+  .empty-list .big { font-size: 28px; margin-bottom: 8px; }
+
+  .footer {
+    display: flex; justify-content: space-between; font-size: 11px; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 40px;
+    padding-top: 16px; border-top: 1px solid var(--line);
+  }
+
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .loading { font-size: 12px; color: var(--muted); padding: 10px; text-align: center; }
+
+  /* Custom pin popup */
+  .leaflet-popup-content { margin: 10px 12px; font-family: inherit; }
+  .popup-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .popup-country { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .popup-date { font-size: 11px; color: var(--muted); letter-spacing: 0.3px; }
+  .popup-notes { font-size: 12px; margin-top: 6px; font-style: italic; }
+
+  @media (max-width: 760px) {
+    .wrap { padding: 16px; }
+    .header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="top-nav">
+    <a href="index.html">Daily Habits</a>
+    <a href="weekly-review.html">Weekly Review</a>
+    <a href="books.html">Books</a>
+    <a href="movies.html">Movies</a>
+    <a href="places.html" class="active">Places</a>
+  </nav>
+
+  <div class="header">
+    <div class="brand">
+      <h1>infinite <span>YOU</span></h1>
+      <div class="sub">Places I've Been · Jardine Gerodias</div>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="add-card">
+    <h3>Add a place</h3>
+    <div class="add-row">
+      <div class="field">
+        <label for="locationInput">Location</label>
+        <input id="locationInput" type="text" placeholder="City, country (e.g. Tokyo, Japan)" autocomplete="off" />
+        <div class="suggestions" id="suggestions"></div>
+        <div class="hint">Powered by OpenStreetMap — no API key needed.</div>
+      </div>
+      <div class="field">
+        <label for="dateInput">Date visited</label>
+        <input id="dateInput" type="date" />
+      </div>
+      <div class="field">
+        <label for="notesInput">Note (optional)</label>
+        <input id="notesInput" type="text" placeholder="What made it memorable..." />
+      </div>
+      <button class="btn-primary" id="addBtn">Add pin</button>
+    </div>
+    <div class="preview-chip" id="previewChip">
+      <div class="meta">
+        <div class="t" id="previewName"></div>
+        <div class="a" id="previewCoords"></div>
+      </div>
+      <button class="clear" id="previewClear" title="Clear selection">×</button>
+    </div>
+  </div>
+
+  <div class="map-layout">
+    <div id="map"></div>
+    <div class="place-list">
+      <div class="place-list-head">Pins · <span id="pinCount">0</span></div>
+      <div class="place-list-body" id="placeListBody"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="left">GO PLACES.</div>
+    <div class="right">Jardine Gerodias</div>
+  </div>
+</div>
+
+<script>
+// ---------- Storage ----------
+const STORAGE_KEY = 'infiniteYouTracker_places_v1';
+let places = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let selected = null; // { name, displayName, country, countryCode, lat, lng } from Nominatim
+let markers = {}; // id -> Leaflet marker
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(places));
+}
+
+// ---------- Map setup (Leaflet + OpenStreetMap) ----------
+const map = L.map('map', { worldCopyJump: true }).setView([20, 0], 2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 19,
+}).addTo(map);
+
+// Custom gold pin icon
+const goldIcon = L.divIcon({
+  className: 'custom-pin',
+  html: `<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#c89a3a"/>
+    <circle cx="14" cy="14" r="5" fill="#fff"/>
+  </svg>`,
+  iconSize: [28, 36],
+  iconAnchor: [14, 36],
+  popupAnchor: [0, -32],
+});
+
+// ---------- Nominatim geocoding (OSM, no API key) ----------
+// Docs: https://nominatim.org/release-docs/develop/api/Search/
+let searchTimer = null;
+let lastQuery = '';
+
+async function geocode(q) {
+  if (!q || q.length < 2) return [];
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1&accept-language=en`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.map(d => ({
+      name: d.name || (d.display_name.split(',')[0] || '').trim(),
+      displayName: d.display_name,
+      country: d.address?.country || '',
+      countryCode: d.address?.country_code || '',
+      lat: parseFloat(d.lat),
+      lng: parseFloat(d.lon),
+    }));
+  } catch (err) {
+    console.error('Nominatim search failed:', err);
+    return [];
+  }
+}
+
+// ---------- Suggestion UI ----------
+const locationInput = document.getElementById('locationInput');
+const suggestions = document.getElementById('suggestions');
+const previewChip = document.getElementById('previewChip');
+const previewName = document.getElementById('previewName');
+const previewCoords = document.getElementById('previewCoords');
+
+locationInput.addEventListener('input', () => {
+  const q = locationInput.value.trim();
+  clearTimeout(searchTimer);
+  if (q.length < 2) { suggestions.classList.remove('show'); return; }
+  suggestions.innerHTML = '<div class="loading">Searching…</div>';
+  suggestions.classList.add('show');
+  searchTimer = setTimeout(async () => {
+    lastQuery = q;
+    const results = await geocode(q);
+    if (lastQuery !== q) return;
+    renderSuggestions(results);
+  }, 400);
+});
+
+locationInput.addEventListener('blur', () => {
+  setTimeout(() => suggestions.classList.remove('show'), 150);
+});
+locationInput.addEventListener('focus', () => {
+  if (suggestions.children.length > 0 && locationInput.value.trim().length >= 2) {
+    suggestions.classList.add('show');
+  }
+});
+
+function renderSuggestions(results) {
+  if (!results.length) {
+    suggestions.innerHTML = '<div class="loading">No matches — try a different spelling.</div>';
+    return;
+  }
+  suggestions.innerHTML = '';
+  results.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'suggestion';
+    row.innerHTML = `
+      <div class="main">${escapeHtml(r.name)}</div>
+      <div class="sub">${escapeHtml(r.displayName)}</div>
+    `;
+    row.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectSuggestion(r);
+    });
+    suggestions.appendChild(row);
+  });
+}
+
+function selectSuggestion(r) {
+  selected = r;
+  locationInput.value = r.name;
+  previewName.textContent = r.displayName;
+  previewCoords.textContent = `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`;
+  previewChip.classList.add('show');
+  suggestions.classList.remove('show');
+  // Preview on map
+  map.flyTo([r.lat, r.lng], 6, { duration: 0.8 });
+}
+
+document.getElementById('previewClear').addEventListener('click', () => {
+  selected = null;
+  previewChip.classList.remove('show');
+  locationInput.value = '';
+  locationInput.focus();
+});
+
+// ---------- Add / delete ----------
+document.getElementById('addBtn').addEventListener('click', addPlace);
+locationInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); addPlace(); }
+});
+
+function addPlace() {
+  if (!selected) {
+    alert('Pick a location from the dropdown suggestions so we know where to pin it.');
+    locationInput.focus();
+    return;
+  }
+  // Dedupe by displayName (same city shouldn't appear twice)
+  const existing = places.find(p => p.displayName === selected.displayName);
+  if (existing) {
+    alert(`${selected.name} is already pinned.`);
+    return;
+  }
+  const entry = {
+    id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    name: selected.name,
+    displayName: selected.displayName,
+    country: selected.country,
+    countryCode: selected.countryCode,
+    lat: selected.lat,
+    lng: selected.lng,
+    dateVisited: document.getElementById('dateInput').value || null,
+    notes: document.getElementById('notesInput').value.trim(),
+    createdAt: new Date().toISOString(),
+  };
+  places.unshift(entry);
+  save();
+  addMarker(entry);
+  resetForm();
+  render();
+}
+
+function resetForm() {
+  locationInput.value = '';
+  document.getElementById('dateInput').value = todayYmd();
+  document.getElementById('notesInput').value = '';
+  selected = null;
+  previewChip.classList.remove('show');
+}
+
+function deletePlace(id) {
+  if (!confirm('Remove this pin?')) return;
+  places = places.filter(p => p.id !== id);
+  save();
+  if (markers[id]) {
+    map.removeLayer(markers[id]);
+    delete markers[id];
+  }
+  render();
+}
+
+// ---------- Markers ----------
+function addMarker(p) {
+  const marker = L.marker([p.lat, p.lng], { icon: goldIcon }).addTo(map);
+  marker.bindPopup(`
+    <div class="popup-title">${escapeHtml(p.name)}</div>
+    <div class="popup-country">${escapeHtml(p.country || '')}</div>
+    ${p.dateVisited ? `<div class="popup-date">Visited ${fmtDate(p.dateVisited)}</div>` : ''}
+    ${p.notes ? `<div class="popup-notes">"${escapeHtml(p.notes)}"</div>` : ''}
+  `);
+  markers[p.id] = marker;
+}
+
+function flyTo(id) {
+  const p = places.find(x => x.id === id);
+  if (!p) return;
+  map.flyTo([p.lat, p.lng], 8, { duration: 0.9 });
+  if (markers[id]) markers[id].openPopup();
+  document.querySelectorAll('.place-row').forEach(r => r.classList.toggle('active', r.dataset.id === id));
+}
+
+// ---------- Render ----------
+function render() {
+  renderStats();
+  renderList();
+}
+
+function renderStats() {
+  const total = places.length;
+  const countries = new Set(places.map(p => p.country).filter(Boolean)).size;
+  const thisYear = new Date().getFullYear();
+  const visitedThisYear = places.filter(p => p.dateVisited && new Date(p.dateVisited).getFullYear() === thisYear).length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="label">Cities pinned</div><div class="value">${total}</div></div>
+    <div class="stat"><div class="label">Countries</div><div class="value">${countries}</div></div>
+    <div class="stat"><div class="label">Visited in ${thisYear}</div><div class="value">${visitedThisYear}</div></div>
+  `;
+}
+
+function renderList() {
+  document.getElementById('pinCount').textContent = places.length;
+  const body = document.getElementById('placeListBody');
+  if (!places.length) {
+    body.innerHTML = `<div class="empty-list"><div class="big">🗺️</div><div>No pins yet — add your first place above.</div></div>`;
+    return;
+  }
+  body.innerHTML = places.map(p => `
+    <div class="place-row" data-id="${p.id}">
+      <button class="delete" data-id="${p.id}" title="Remove">×</button>
+      <div class="name">${escapeHtml(p.name)}</div>
+      <div class="country">${escapeHtml(p.country || '')}</div>
+      ${p.dateVisited ? `<div class="date">${fmtDate(p.dateVisited)}</div>` : ''}
+      ${p.notes ? `<div class="notes">"${escapeHtml(p.notes)}"</div>` : ''}
+    </div>
+  `).join('');
+  body.querySelectorAll('.place-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.classList.contains('delete')) return;
+      flyTo(row.dataset.id);
+    });
+  });
+  body.querySelectorAll('.delete').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deletePlace(btn.dataset.id);
+    });
+  });
+}
+
+// ---------- Helpers ----------
+function todayYmd() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ---------- Bootstrap ----------
+document.getElementById('dateInput').value = todayYmd();
+places.forEach(addMarker);
+// If there are existing pins, zoom to fit them
+if (places.length > 0) {
+  const bounds = L.latLngBounds(places.map(p => [p.lat, p.lng]));
+  map.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 });
+}
+render();
+</script>
+</body>
+</html>

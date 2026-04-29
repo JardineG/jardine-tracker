@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>infinite YOU · Weekly Review</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #f7f3ec;
+    --panel: #ffffff;
+    --ink: #1f2933;
+    --muted: #6b7280;
+    --line: #e7e1d4;
+    --gold: #c89a3a;
+    --teal: #1f5f5f;
+    --teal-soft: #d8ebe9;
+    --red: #7a2030;
+    --red-soft: #f3dadd;
+    --green: #2d5a3d;
+    --green-soft: #dceadf;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px; }
+
+  /* Top navigation */
+  .top-nav {
+    display: flex; gap: 4px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .top-nav a {
+    padding: 10px 18px; text-decoration: none; color: var(--muted);
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .top-nav a:hover { color: var(--ink); }
+  .top-nav a.active { color: var(--ink); border-bottom-color: var(--gold); }
+
+  /* Header */
+  .header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 20px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .brand h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+  .brand h1 span { color: var(--gold); }
+  .brand .sub { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+
+  .week-nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .week-nav button {
+    background: transparent; border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 10px; cursor: pointer; font-size: 14px; color: var(--ink);
+    font-family: inherit;
+  }
+  .week-nav button:hover { background: var(--panel); }
+  .week-label { font-weight: 700; font-size: 15px; min-width: 240px; text-align: center; }
+
+  /* Status banner */
+  .banner {
+    padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;
+    font-size: 13px; font-weight: 600; display: none;
+  }
+  .banner.show { display: block; }
+  .banner.info { background: var(--teal-soft); color: var(--teal); border: 1px solid var(--teal); }
+  .banner.success { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
+  .banner.warn { background: #fff5d6; color: #8a6a1a; border: 1px solid var(--gold); }
+
+  /* Weekly targets card */
+  .targets-card {
+    background: var(--panel); border: 1px solid var(--gold);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
+  }
+  .targets-head {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold); font-weight: 800; margin-bottom: 4px;
+  }
+  .targets-hint {
+    font-size: 12px; color: var(--muted); font-style: italic;
+    margin-bottom: 12px;
+  }
+  .targets-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  }
+  .target-field { display: flex; flex-direction: column; gap: 4px; }
+  .target-field label {
+    font-size: 10px; letter-spacing: 1px; color: var(--muted);
+    text-transform: uppercase; font-weight: 700;
+  }
+  .target-field input {
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: #fff;
+  }
+  .target-field input:focus { outline: none; border-color: var(--gold); }
+  @media (max-width: 900px) {
+    .targets-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .targets-grid { grid-template-columns: 1fr; }
+  }
+
+  /* "Week ahead" calendar card (refreshed Sundays at 8am) */
+  .schedule-card {
+    background: var(--panel); border: 1px solid var(--teal);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
+  }
+  .schedule-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .schedule-title {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--teal); font-weight: 800;
+  }
+  .schedule-fetched {
+    font-size: 11px; color: var(--muted); font-style: italic;
+  }
+  .schedule-hint {
+    font-size: 12px; color: var(--muted); font-style: italic;
+    margin: 4px 0 12px;
+  }
+  .schedule-days { display: flex; flex-direction: column; gap: 14px; }
+  .schedule-day { padding: 0; }
+  .schedule-day-head {
+    font-size: 11px; font-weight: 800; color: var(--ink);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .schedule-day.today .schedule-day-head {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+  .schedule-day-events {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .schedule-event {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 10px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--evt-color, var(--muted));
+    border-radius: 6px;
+    font-size: 13px; line-height: 1.4;
+  }
+  .schedule-event-time {
+    color: var(--muted); font-weight: 600; min-width: 110px;
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .schedule-event-title { color: var(--ink); flex: 1; font-weight: 500; }
+  .schedule-event.all-day {
+    background: var(--evt-color, var(--muted));
+    border-color: transparent;
+  }
+  .schedule-event.all-day .schedule-event-time,
+  .schedule-event.all-day .schedule-event-title {
+    color: #fff;
+    font-weight: 600;
+  }
+  .schedule-empty-day {
+    font-size: 12px; color: var(--muted); font-style: italic;
+    padding: 4px 0;
+  }
+  .schedule-empty {
+    font-size: 13px; color: var(--muted); font-style: italic;
+    padding: 8px 0;
+  }
+  @media (max-width: 600px) {
+    .schedule-event { flex-direction: column; gap: 0; }
+    .schedule-event-time { min-width: 0; font-size: 12px; }
+  }
+
+  /* Question card */
+  .q-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 14px;
+  }
+  .q-num {
+    display: inline-block; background: var(--teal); color: #fff;
+    font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
+    padding: 3px 8px; border-radius: 4px; margin-right: 8px;
+  }
+  .q-text {
+    font-size: 15px; font-weight: 700; color: var(--ink);
+    margin-bottom: 4px; line-height: 1.4;
+  }
+  .q-hint {
+    font-size: 12px; color: var(--muted); margin-bottom: 10px;
+    margin-left: 36px; line-height: 1.4; font-style: italic;
+  }
+  .q-card textarea {
+    width: 100%; min-height: 90px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-family: inherit; color: var(--ink);
+    background: #fff; resize: vertical; line-height: 1.5;
+  }
+  .q-card textarea:focus { outline: none; border-color: var(--gold); }
+
+  /* Numbered list questions (Q1, Q5) */
+  .q-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .list-row { display: flex; align-items: flex-start; gap: 8px; }
+  .list-row .num {
+    font-weight: 800; color: var(--gold); min-width: 22px; font-size: 14px;
+    text-align: right; padding-top: 10px;
+  }
+  .list-row textarea {
+    flex: 1; min-width: 0;
+  }
+  /* Auto-growing single-line-feel textareas — used for list rows + goal/outcome */
+  textarea.auto-grow {
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: #fff;
+    width: 100%; resize: none; overflow: hidden;
+    min-height: 38px; line-height: 1.4;
+    display: block;
+  }
+  textarea.auto-grow:focus { outline: none; border-color: var(--gold); }
+  .add-row {
+    background: transparent; border: 1px dashed var(--line); border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; font-size: 11px; color: var(--muted);
+    font-family: inherit; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; align-self: flex-start; margin-top: 2px;
+  }
+  .add-row:hover { color: var(--gold); border-color: var(--gold); }
+  .prefill-note {
+    font-size: 11px; color: var(--teal); font-style: italic;
+    margin-top: 8px; padding: 6px 10px;
+    background: var(--teal-soft); border-radius: 6px;
+    display: none;
+  }
+  .prefill-note.show { display: block; }
+
+  /* Goal-with-status rows (Q2) */
+  .q-goals { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .goal-row {
+    display: grid;
+    grid-template-columns: 22px minmax(150px, 1fr) 130px minmax(150px, 1.4fr);
+    gap: 8px;
+    align-items: start;
+  }
+  .goal-row .num {
+    font-weight: 800; color: var(--gold); font-size: 14px; text-align: right;
+    padding-top: 10px;
+  }
+  .goal-status {
+    padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: #fff; cursor: pointer;
+    color: var(--ink); font-weight: 600;
+    min-height: 38px;
+  }
+  .goal-status:focus { outline: none; border-color: var(--gold); }
+  .goal-status[data-value="done"]       { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+  .goal-status[data-value="incomplete"] { background: var(--red-soft);   color: var(--red);   border-color: var(--red); }
+  .goal-status[data-value="postponed"]  { background: #fdf2d8;           color: var(--gold);  border-color: var(--gold); }
+  .goal-status[data-value="killed"]     { background: var(--bg);         color: var(--muted); border-color: var(--line); }
+
+  /* Carried-over priorities (auto-shown at top of Q5 from Q2's not-done items) */
+  .carried-section {
+    background: var(--teal-soft); border: 1px solid var(--teal);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;
+    display: none;
+  }
+  .carried-section.show { display: block; }
+  .carried-head {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--teal); font-weight: 800; margin-bottom: 8px;
+  }
+  .carried-list { display: flex; flex-direction: column; gap: 6px; }
+  .carried-item {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 1px solid var(--teal-soft);
+    padding: 6px 10px; border-radius: 6px;
+  }
+  .carried-item .num {
+    font-weight: 800; color: var(--teal); font-size: 13px; min-width: 22px; text-align: right;
+  }
+  .carried-item .text { flex: 1; font-size: 14px; color: var(--ink); line-height: 1.4; }
+  .carried-item .status-pill {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 4px; white-space: nowrap;
+  }
+  .carried-item .status-pill[data-value="not_started"] { background: var(--bg); color: var(--muted); }
+  .carried-item .status-pill[data-value="incomplete"]  { background: var(--red-soft); color: var(--red); }
+
+  @media (max-width: 760px) {
+    .goal-row {
+      grid-template-columns: 22px 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 6px 8px;
+    }
+    .goal-row .num         { grid-column: 1; grid-row: 1; align-self: start; padding-top: 10px; }
+    .goal-row .goal-input  { grid-column: 2; grid-row: 1; }
+    .goal-row .goal-status { grid-column: 2; grid-row: 2; }
+    .goal-row .goal-outcome{ grid-column: 2; grid-row: 3; }
+  }
+
+  /* Save row */
+  .save-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 16px; padding: 14px 16px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .save-row .saved-info { font-size: 12px; color: var(--muted); }
+  .btn-primary {
+    padding: 10px 22px; background: var(--gold); color: #fff; border: 0; border-radius: 8px;
+    font-weight: 700; cursor: pointer; font-size: 14px; font-family: inherit;
+    letter-spacing: 0.5px;
+  }
+  .btn-primary:hover { opacity: 0.92; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Postponed projects (cross-week backlog) */
+  .postponed-section {
+    background: var(--panel); border: 1px solid var(--gold);
+    border-radius: 12px; padding: 16px 20px;
+    margin-top: 24px; margin-bottom: 16px;
+  }
+  .postponed-head {
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold); font-weight: 800; margin-bottom: 4px;
+  }
+  .postponed-hint {
+    font-size: 12px; color: var(--muted); font-style: italic;
+    margin-bottom: 12px;
+  }
+  .postponed-list { display: flex; flex-direction: column; gap: 6px; }
+  .postponed-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px;
+    cursor: pointer;
+  }
+  .postponed-item:hover { border-color: var(--gold); }
+  .postponed-item input[type="checkbox"] {
+    width: 16px; height: 16px; cursor: pointer; accent-color: var(--gold);
+    flex-shrink: 0;
+  }
+  .postponed-item .postponed-text {
+    flex: 1; font-size: 14px; line-height: 1.4; color: var(--ink);
+  }
+  .postponed-item.checked { background: #fdf2d8; border-color: var(--gold); }
+  .postponed-item.checked .postponed-text {
+    text-decoration: line-through; color: var(--muted);
+  }
+  .postponed-item .postponed-meta {
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+  }
+  .postponed-empty { color: var(--muted); font-size: 12px; padding: 8px 0; }
+
+  /* Past reviews list */
+  .past-section { margin-top: 32px; }
+  .past-head {
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; margin-bottom: 12px;
+  }
+  .past-item {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 8px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: background 0.12s;
+  }
+  .past-item:hover { background: var(--bg); border-color: var(--gold); }
+  .past-item .week { font-weight: 700; font-size: 14px; }
+  .past-item .preview { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .footer {
+    display: flex; justify-content: space-between; font-size: 11px; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 40px;
+    padding-top: 16px; border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 760px) {
+    .wrap { padding: 16px; }
+    .header { flex-direction: column; align-items: flex-start; }
+    .week-nav { width: 100%; justify-content: space-between; }
+    .week-label { min-width: 0; flex: 1; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="top-nav">
+    <a href="index.html">Daily Habits</a>
+    <a href="weekly-review.html" class="active">Weekly Review</a>
+    <a href="books.html">Books</a>
+    <a href="movies.html">Movies</a>
+    <a href="places.html">Places</a>
+  </nav>
+
+  <div class="header">
+    <div class="brand">
+      <h1>infinite <span>YOU</span></h1>
+      <div class="sub">Weekly Review · Jardine Gerodias</div>
+    </div>
+    <div class="week-nav">
+      <button id="prevWeek">←</button>
+      <div class="week-label" id="weekLabel"></div>
+      <button id="nextWeek">→</button>
+      <button id="thisWeekBtn">This week</button>
+    </div>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="targets-card">
+    <div class="targets-head">Weekly targets</div>
+    <div class="targets-hint">Used by the Habits page. Carry forward until the next weekly review updates them.</div>
+    <div class="targets-grid">
+      <div class="target-field">
+        <label for="t-morning-steps">Morning steps</label>
+        <input id="t-morning-steps" type="number" min="0" placeholder="e.g. 6000" />
+      </div>
+      <div class="target-field">
+        <label for="t-steps">Total daily steps</label>
+        <input id="t-steps" type="number" min="0" placeholder="e.g. 10000" />
+      </div>
+      <div class="target-field">
+        <label for="t-calories">Daily calories (max)</label>
+        <input id="t-calories" type="number" min="0" placeholder="e.g. 2000" />
+      </div>
+      <div class="target-field">
+        <label for="t-protein">Daily protein (g, min)</label>
+        <input id="t-protein" type="number" min="0" placeholder="e.g. 150" />
+      </div>
+    </div>
+  </div>
+
+  <div class="schedule-card" id="scheduleCard">
+    <div class="schedule-head">
+      <div class="schedule-title">The week ahead</div>
+      <div class="schedule-fetched" id="scheduleFetched"></div>
+    </div>
+    <div class="schedule-hint">Your Google Calendar for the 7 days after this Sunday — refreshed every Sunday at 8am.</div>
+    <div class="schedule-days" id="scheduleDays">
+      <div class="schedule-empty">Loading…</div>
+    </div>
+  </div>
+
+  <div id="questionsContainer"></div>
+
+  <div class="save-row">
+    <div class="saved-info" id="savedInfo">Not saved yet</div>
+    <button class="btn-primary" id="saveBtn">Save review</button>
+  </div>
+
+  <div class="postponed-section">
+    <div class="postponed-head">Postponed projects</div>
+    <div class="postponed-hint">Anything you've ever marked "postponed" — check the box to pull it into this week's Top priorities.</div>
+    <div class="postponed-list" id="postponedList">
+      <div class="postponed-empty">Loading…</div>
+    </div>
+  </div>
+
+  <div class="past-section">
+    <div class="past-head">Past reviews</div>
+    <div id="pastList"></div>
+  </div>
+
+  <div class="footer">
+    <div class="left">REFLECT WEEKLY.</div>
+    <div class="right">Jardine Gerodias</div>
+  </div>
+</div>
+
+<script>
+// ---------- Supabase ----------
+const SUPABASE_URL = 'https://prqpnfrfwquncyfysvks.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_zXQdgBgA0DXTf7julXpQkw_A4Gd-57l';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ---------- The 6 questions ----------
+const QUESTIONS = [
+  { key: 'wins',             title: 'Wins',                                  hint: 'what went well this week',                                       type: 'list'  },
+  { key: 'goals_last_week',  title: 'Priorities from last week → what happened', hint: 'each row: the priority, its status, and what actually happened', type: 'goals' },
+  { key: 'obstacles_stops',  title: 'What got in the way & what to stop',    hint: 'obstacles, frustrations, patterns to break',                     type: 'text'  },
+  { key: 'lessons',          title: 'Lessons',                               hint: 'what did I learn from all of the above?',                        type: 'text'  },
+  { key: 'next_priorities',  title: 'Top 3-5 priorities for next week',      hint: 'what needs to happen to make it better than this one',           type: 'list'  },
+];
+const MIN_LIST_ROWS = 3;
+const STATUS_OPTIONS = [
+  { value: 'not_started', label: 'not started' },
+  { value: 'done',        label: 'done' },
+  { value: 'incomplete',  label: 'incomplete' },
+  { value: 'postponed',   label: 'postponed' },
+  { value: 'killed',      label: 'killed' },
+];
+
+// ---------- Week math ----------
+// A "week" here is the week ENDING on Sunday (the day the review fires).
+// Identified by its Sunday date as YYYY-MM-DD.
+function sundayOf(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+  const offsetToSunday = day === 0 ? 0 : 7 - day;
+  d.setDate(d.getDate() + offsetToSunday);
+  return d;
+}
+function ymd(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+function weekRangeLabel(sunday) {
+  const monday = new Date(sunday);
+  monday.setDate(monday.getDate() - 6);
+  const fmt = { month: 'short', day: 'numeric' };
+  return `${monday.toLocaleDateString(undefined, fmt)} – ${sunday.toLocaleDateString(undefined, fmt)}, ${sunday.getFullYear()}`;
+}
+
+// ---------- State ----------
+let currentSunday = sundayOf(new Date());
+let currentReview = null; // row from db, or null
+
+// ---------- Render questions ----------
+function renderQuestions() {
+  const container = document.getElementById('questionsContainer');
+  container.innerHTML = QUESTIONS.map((q, i) => {
+    let body = '';
+    if (q.type === 'list') {
+      const carriedBlock = q.key === 'next_priorities'
+        ? `<div class="carried-section" data-key="${q.key}">
+             <div class="carried-head">From last week, still to do — pulled in from Q2:</div>
+             <div class="carried-list"></div>
+           </div>`
+        : '';
+      body = `${carriedBlock}
+              <div class="q-list" data-key="${q.key}"></div>
+              <button type="button" class="add-row" data-key="${q.key}">+ Add another</button>
+              <div class="prefill-note" data-key="${q.key}"></div>`;
+    } else if (q.type === 'goals') {
+      body = `<div class="q-goals" data-key="${q.key}"></div>
+              <button type="button" class="add-row" data-key="${q.key}">+ Add another</button>
+              <div class="prefill-note" data-key="${q.key}"></div>`;
+    } else {
+      body = `<textarea data-key="${q.key}" placeholder="Your thoughts..."></textarea>`;
+    }
+    return `
+      <div class="q-card" data-q="${q.key}">
+        <div class="q-text"><span class="q-num">Q${i + 1}</span>${q.title}</div>
+        <div class="q-hint">${q.hint}</div>
+        ${body}
+      </div>`;
+  }).join('');
+}
+
+// Auto-grow a textarea to fit its content (so long text wraps and the box expands).
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+function autoGrowAll(root) {
+  (root || document).querySelectorAll('textarea.auto-grow').forEach(autoGrow);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Scan Q2 (priorities + status) and surface any not_started/incomplete items
+// at the top of Q5 so unfinished work auto-rolls into next week's plan.
+function refreshCarriedPriorities() {
+  const q2Rows = document.querySelectorAll('.q-goals[data-key="goals_last_week"] .goal-row');
+  const carried = [];
+  q2Rows.forEach(row => {
+    const priority = row.querySelector('.goal-input').value.trim();
+    const status   = row.querySelector('.goal-status').value;
+    if (priority && (status === 'not_started' || status === 'incomplete')) {
+      carried.push({ text: priority, status });
+    }
+  });
+  const section = document.querySelector('.carried-section[data-key="next_priorities"]');
+  if (!section) return;
+  if (carried.length === 0) {
+    section.classList.remove('show');
+    return;
+  }
+  section.classList.add('show');
+  const list = section.querySelector('.carried-list');
+  list.innerHTML = carried.map((it, i) => `
+    <div class="carried-item">
+      <span class="num">${i + 1}.</span>
+      <span class="text">${escapeHtml(it.text)}</span>
+      <span class="status-pill" data-value="${it.status}">${it.status.replace('_', ' ')}</span>
+    </div>
+  `).join('');
+}
+
+// Build N numbered rows for a simple list-type question.
+function setListRows(key, values) {
+  const container = document.querySelector(`.q-list[data-key="${key}"]`);
+  if (!container) return;
+  const items = (values || []).filter(v => v !== undefined && v !== null);
+  const numRows = Math.max(items.length, MIN_LIST_ROWS);
+  container.innerHTML = '';
+  for (let i = 0; i < numRows; i++) {
+    const row = document.createElement('div');
+    row.className = 'list-row';
+    row.innerHTML = `<span class="num">${i + 1}.</span><textarea class="auto-grow" rows="1"></textarea>`;
+    if (items[i]) row.querySelector('textarea').value = items[i];
+    container.appendChild(row);
+  }
+  autoGrowAll(container);
+}
+
+// Build N goal-rows for the Q2 "goals + status + outcome" question.
+function setGoalRows(key, goalObjects) {
+  const container = document.querySelector(`.q-goals[data-key="${key}"]`);
+  if (!container) return;
+  const items = (goalObjects || []).filter(Boolean);
+  const numRows = Math.max(items.length, MIN_LIST_ROWS);
+  container.innerHTML = '';
+  for (let i = 0; i < numRows; i++) {
+    const item = items[i] || { goal: '', status: 'not_started', outcome: '' };
+    const row = document.createElement('div');
+    row.className = 'goal-row';
+    row.innerHTML = `
+      <span class="num">${i + 1}.</span>
+      <textarea class="auto-grow goal-input" rows="1" placeholder="Priority..."></textarea>
+      <select class="goal-status">
+        ${STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+      </select>
+      <textarea class="auto-grow goal-outcome" rows="1" placeholder="What actually happened?"></textarea>
+    `;
+    row.querySelector('.goal-input').value = item.goal || '';
+    const sel = row.querySelector('.goal-status');
+    sel.value = item.status || 'not_started';
+    sel.dataset.value = sel.value;
+    row.querySelector('.goal-outcome').value = item.outcome || '';
+    container.appendChild(row);
+  }
+  autoGrowAll(container);
+}
+
+// Try to parse the stored goals value. Accepts JSON or falls back to legacy
+// newline-list (each line becomes a goal with status="not_started").
+function parseGoalsValue(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {}
+  return value.split('\n').map(s => s.trim()).filter(Boolean)
+    .map(g => ({ goal: g, status: 'not_started', outcome: '' }));
+}
+
+function fillAnswers(review) {
+  QUESTIONS.forEach(q => {
+    const value = review && review[q.key] ? review[q.key] : '';
+    if (q.type === 'list') {
+      const items = value ? value.split('\n').filter(v => v.trim()) : [];
+      setListRows(q.key, items);
+      const note = document.querySelector(`.prefill-note[data-key="${q.key}"]`);
+      if (note) note.classList.remove('show');
+    } else if (q.type === 'goals') {
+      setGoalRows(q.key, parseGoalsValue(value));
+      const note = document.querySelector(`.prefill-note[data-key="${q.key}"]`);
+      if (note) note.classList.remove('show');
+    } else {
+      const el = document.querySelector(`textarea[data-key="${q.key}"]`);
+      if (el) el.value = value;
+    }
+  });
+  refreshCarriedPriorities();
+}
+
+function collectAnswers() {
+  const out = {};
+  QUESTIONS.forEach(q => {
+    if (q.type === 'list') {
+      const fields = document.querySelectorAll(`.q-list[data-key="${q.key}"] textarea`);
+      const values = Array.from(fields).map(f => f.value.trim()).filter(v => v);
+      out[q.key] = values.join('\n');
+    } else if (q.type === 'goals') {
+      const rows = document.querySelectorAll(`.q-goals[data-key="${q.key}"] .goal-row`);
+      const items = Array.from(rows).map(r => ({
+        goal:    r.querySelector('.goal-input').value.trim(),
+        status:  r.querySelector('.goal-status').value,
+        outcome: r.querySelector('.goal-outcome').value.trim(),
+      })).filter(r => r.goal || r.outcome); // drop fully empty rows
+      out[q.key] = items.length ? JSON.stringify(items) : '';
+    } else {
+      const el = document.querySelector(`textarea[data-key="${q.key}"]`);
+      out[q.key] = el ? el.value.trim() : '';
+    }
+  });
+  return out;
+}
+
+// ---------- Targets ----------
+const TARGET_FIELDS = [
+  { key: 'target_morning_steps',  el: 't-morning-steps' },
+  { key: 'target_daily_steps',    el: 't-steps' },
+  { key: 'target_daily_calories', el: 't-calories' },
+  { key: 'target_daily_protein',  el: 't-protein' },
+];
+
+function fillTargets(review) {
+  TARGET_FIELDS.forEach(t => {
+    const el = document.getElementById(t.el);
+    if (!el) return;
+    el.value = review && review[t.key] ? review[t.key] : '';
+  });
+}
+
+function collectTargets() {
+  const out = {};
+  TARGET_FIELDS.forEach(t => {
+    const el = document.getElementById(t.el);
+    const raw = el ? el.value.trim() : '';
+    out[t.key] = raw === '' ? null : parseInt(raw, 10);
+  });
+  return out;
+}
+
+// If the current week has no saved review, copy last week's targets in as a starting point.
+async function prefillTargetsFromLastWeek(sundayDate) {
+  const lastSunday = new Date(sundayDate);
+  lastSunday.setDate(lastSunday.getDate() - 7);
+  const lastDateStr = ymd(lastSunday);
+  const { data, error } = await sb
+    .from('weekly_reviews')
+    .select('target_morning_steps, target_daily_steps, target_daily_calories, target_daily_protein')
+    .eq('week_ending', lastDateStr)
+    .maybeSingle();
+  if (error || !data) return;
+  fillTargets(data);
+}
+
+// ---------- Banner ----------
+function showBanner(msg, kind) {
+  const b = document.getElementById('banner');
+  b.className = `banner show ${kind}`;
+  b.textContent = msg;
+  if (kind === 'success') {
+    setTimeout(() => { b.className = 'banner'; }, 3500);
+  }
+}
+
+// ---------- Load / save ----------
+async function loadReview(sundayDate) {
+  const dateStr = ymd(sundayDate);
+  document.getElementById('weekLabel').textContent = weekRangeLabel(sundayDate);
+
+  const { data, error } = await sb
+    .from('weekly_reviews')
+    .select('*')
+    .eq('week_ending', dateStr)
+    .maybeSingle();
+
+  if (error) {
+    showBanner('Error loading: ' + error.message, 'warn');
+    return;
+  }
+
+  currentReview = data;
+  fillAnswers(data);
+  fillTargets(data);
+
+  const info = document.getElementById('savedInfo');
+  if (data) {
+    const updated = new Date(data.updated_at || data.created_at);
+    info.textContent = `Saved ${updated.toLocaleString()}`;
+  } else {
+    info.textContent = 'Not saved yet';
+    // Brand-new week: try to prefill Q2 from last week's Q6, and pull last week's targets too
+    await prefillGoalsFromLastWeek(sundayDate);
+    await prefillTargetsFromLastWeek(sundayDate);
+  }
+
+  // Show reminder banner if it's Sunday and this week's review is empty
+  const today = new Date();
+  const isThisWeek = ymd(sundayOf(today)) === dateStr;
+  const banner = document.getElementById('banner');
+  if (isThisWeek && today.getDay() === 0 && !data) {
+    showBanner("It's Sunday — time for your weekly review.", 'info');
+  } else if (banner.classList.contains('info')) {
+    banner.className = 'banner';
+  }
+}
+
+// When opening a fresh week (no saved review), copy last week's "next priorities"
+// into this week's "goals from last week" so you can grade yourself against them.
+async function prefillGoalsFromLastWeek(sundayDate) {
+  const lastSunday = new Date(sundayDate);
+  lastSunday.setDate(lastSunday.getDate() - 7);
+  const lastDateStr = ymd(lastSunday);
+
+  const { data, error } = await sb
+    .from('weekly_reviews')
+    .select('next_priorities')
+    .eq('week_ending', lastDateStr)
+    .maybeSingle();
+
+  if (error || !data || !data.next_priorities) return;
+
+  const items = data.next_priorities.split('\n').map(s => s.trim()).filter(Boolean);
+  if (items.length === 0) return;
+
+  // Convert each priority into a goal-row with default status "not_started"
+  const goals = items.map(g => ({ goal: g, status: 'not_started', outcome: '' }));
+  setGoalRows('goals_last_week', goals);
+
+  const note = document.querySelector('.prefill-note[data-key="goals_last_week"]');
+  if (note) {
+    note.textContent = `↑ pulled in from last week's priorities — set status & fill in outcomes`;
+    note.classList.add('show');
+  }
+}
+
+async function saveReview() {
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  const answers = collectAnswers();
+  const targets = collectTargets();
+  const dateStr = ymd(currentSunday);
+  const payload = {
+    week_ending: dateStr,
+    ...answers,
+    ...targets,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await sb
+    .from('weekly_reviews')
+    .upsert(payload, { onConflict: 'week_ending' })
+    .select()
+    .maybeSingle();
+
+  btn.disabled = false;
+
+  if (error) {
+    showBanner('Save failed: ' + error.message, 'warn');
+    return;
+  }
+
+  currentReview = data;
+  document.getElementById('savedInfo').textContent = `Saved ${new Date().toLocaleString()}`;
+  showBanner('Review saved.', 'success');
+  loadPastReviews();
+  loadPostponedProjects();
+}
+
+// ---------- Week-ahead schedule (snapshot from Google Calendar) ----------
+// Per-calendar colors, matched to Jardine's Google Calendar palette.
+const CALENDAR_COLORS = {
+  'MMG':                     '#D50000', // tomato
+  'Accelerator':             '#E67C73', // flamingo
+  'DEEP WORK':               '#000000', // black
+  'Enderun':                 '#33B679', // sage
+  'EO':                      '#F6BF26', // banana
+  'Expedise':                '#3F51B5', // blueberry
+  'Forum BFFLBL':            '#8E24AA', // grape
+  'Kaizen':                  '#C0CA33', // avocado
+  'LEAP':                    '#B39DDB', // wisteria
+  'LEAP98 Infinite You':     '#795548', // cocoa
+  'Personal':                '#616161', // graphite
+  'SCI':                     '#0B8043', // basil
+  'Holidays in Philippines': '#7986CB', // lavender
+  'End Contracts':           '#9E9E9E', // neutral grey
+};
+const DEFAULT_CALENDAR_COLOR = '#9E9E9E';
+function calendarColor(name) {
+  return CALENDAR_COLORS[name] || DEFAULT_CALENDAR_COLOR;
+}
+
+// Reads the saved snapshot for `sundayDate` and renders a day-by-day list
+// for the 7 days after that Sunday. The snapshot is written by a separate
+// scheduled job that runs every Sunday at 8am.
+async function loadSchedule(sundayDate) {
+  const dateStr = ymd(sundayDate);
+  const fetchedEl = document.getElementById('scheduleFetched');
+  const daysEl = document.getElementById('scheduleDays');
+  fetchedEl.textContent = '';
+  daysEl.innerHTML = '<div class="schedule-empty">Loading…</div>';
+
+  const { data, error } = await sb
+    .from('weekly_schedule_preview')
+    .select('events, fetched_at')
+    .eq('week_ending', dateStr)
+    .maybeSingle();
+
+  if (error) {
+    daysEl.innerHTML = `<div class="schedule-empty">Could not load: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  if (!data) {
+    daysEl.innerHTML = `<div class="schedule-empty">No schedule snapshot yet — appears every Sunday at 8am.</div>`;
+    return;
+  }
+
+  const fetched = new Date(data.fetched_at);
+  fetchedEl.textContent = `as of ${fetched.toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+  })}`;
+  renderScheduleDays(sundayDate, data.events || []);
+}
+
+function renderScheduleDays(sundayDate, events) {
+  const daysEl = document.getElementById('scheduleDays');
+  const todayStr = ymd(new Date());
+  // Build 7 day buckets: Monday after sundayDate → following Sunday.
+  const days = [];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(sundayDate);
+    d.setDate(d.getDate() + i);
+    days.push({
+      date: ymd(d),
+      label: d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }),
+      events: [],
+    });
+  }
+  (events || []).forEach(ev => {
+    const day = days.find(d => d.date === ev.date);
+    if (day) day.events.push(ev);
+  });
+  // Sort each day's events: all-day first, then by start time.
+  days.forEach(d => d.events.sort((a, b) => {
+    if (!!a.all_day !== !!b.all_day) return a.all_day ? -1 : 1;
+    return (a.start || '').localeCompare(b.start || '');
+  }));
+
+  daysEl.innerHTML = days.map(d => {
+    const isToday = d.date === todayStr;
+    const evHtml = d.events.length === 0
+      ? `<div class="schedule-empty-day">— nothing scheduled —</div>`
+      : d.events.map(ev => {
+          const color = calendarColor(ev.calendar);
+          const allDay = ev.all_day ? ' all-day' : '';
+          return `
+            <div class="schedule-event${allDay}" style="--evt-color: ${color}" title="${escapeHtml(ev.calendar || '')}">
+              <div class="schedule-event-time">${escapeHtml(formatEventTime(ev))}</div>
+              <div class="schedule-event-title">${escapeHtml(ev.title || '(untitled)')}</div>
+            </div>
+          `;
+        }).join('');
+    return `
+      <div class="schedule-day${isToday ? ' today' : ''}">
+        <div class="schedule-day-head">${escapeHtml(d.label)}${isToday ? ' · today' : ''}</div>
+        <div class="schedule-day-events">${evHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+function formatEventTime(ev) {
+  if (ev.all_day) return 'all day';
+  const fmt = t => {
+    const d = new Date(t);
+    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  };
+  if (ev.start && ev.end) return `${fmt(ev.start)}–${fmt(ev.end)}`;
+  if (ev.start) return fmt(ev.start);
+  return '';
+}
+
+// ---------- Postponed projects (cross-week backlog) ----------
+async function loadPostponedProjects() {
+  const list = document.getElementById('postponedList');
+  const { data, error } = await sb
+    .from('weekly_reviews')
+    .select('week_ending, goals_last_week')
+    .order('week_ending', { ascending: false });
+
+  if (error) {
+    list.innerHTML = `<div class="postponed-empty">Could not load: ${error.message}</div>`;
+    return;
+  }
+
+  // Walk every saved week's Q2, collect items with status === 'postponed', dedupe by text
+  // (keep the most recent week_ending for each unique item).
+  const seen = new Map();
+  (data || []).forEach(row => {
+    const goals = parseGoalsValue(row.goals_last_week);
+    goals.forEach(g => {
+      const text = (g.goal || '').trim();
+      if (g.status === 'postponed' && text && !seen.has(text)) {
+        seen.set(text, { text, week: row.week_ending });
+      }
+    });
+  });
+
+  const items = Array.from(seen.values());
+  if (items.length === 0) {
+    list.innerHTML = `<div class="postponed-empty">Nothing postponed yet.</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(it => {
+    const sunday = new Date(it.week + 'T00:00:00');
+    const dateLabel = sunday.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `
+      <label class="postponed-item" data-text="${escapeHtml(it.text)}">
+        <input type="checkbox" />
+        <div class="postponed-text">${escapeHtml(it.text)}</div>
+        <div class="postponed-meta">since ${dateLabel}</div>
+      </label>
+    `;
+  }).join('');
+
+  refreshPostponedChecked();
+}
+
+// Reflect the "checked" state of each postponed item based on whether its text
+// is currently present in any Q5 manual priority row.
+function refreshPostponedChecked() {
+  const q5Texts = new Set(
+    Array.from(document.querySelectorAll('.q-list[data-key="next_priorities"] textarea'))
+      .map(t => t.value.trim()).filter(Boolean)
+  );
+  document.querySelectorAll('.postponed-item').forEach(item => {
+    const text = item.dataset.text;
+    const cb = item.querySelector('input[type="checkbox"]');
+    const isOn = q5Texts.has(text);
+    cb.checked = isOn;
+    item.classList.toggle('checked', isOn);
+  });
+}
+
+// ---------- Past reviews list ----------
+async function loadPastReviews() {
+  const { data, error } = await sb
+    .from('weekly_reviews')
+    .select('week_ending, wins, next_priorities')
+    .order('week_ending', { ascending: false })
+    .limit(20);
+
+  const list = document.getElementById('pastList');
+  if (error) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:12px;">Could not load past reviews.</div>`;
+    return;
+  }
+  if (!data || data.length === 0) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px 0;">No past reviews yet.</div>`;
+    return;
+  }
+  list.innerHTML = data.map(r => {
+    const sunday = new Date(r.week_ending + 'T00:00:00');
+    const preview = (r.wins || r.next_priorities || '').slice(0, 90);
+    return `
+      <div class="past-item" data-date="${r.week_ending}">
+        <div>
+          <div class="week">${weekRangeLabel(sunday)}</div>
+          <div class="preview">${preview ? preview + (preview.length === 90 ? '...' : '') : 'Review saved'}</div>
+        </div>
+        <div style="color:var(--muted);font-size:18px;">→</div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.past-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const dateStr = el.dataset.date;
+      currentSunday = new Date(dateStr + 'T00:00:00');
+      loadReview(currentSunday);
+      loadSchedule(currentSunday);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+// ---------- Wire up ----------
+document.getElementById('prevWeek').addEventListener('click', () => {
+  currentSunday.setDate(currentSunday.getDate() - 7);
+  currentSunday = new Date(currentSunday);
+  loadReview(currentSunday);
+  loadSchedule(currentSunday);
+});
+document.getElementById('nextWeek').addEventListener('click', () => {
+  currentSunday.setDate(currentSunday.getDate() + 7);
+  currentSunday = new Date(currentSunday);
+  loadReview(currentSunday);
+  loadSchedule(currentSunday);
+});
+document.getElementById('thisWeekBtn').addEventListener('click', () => {
+  currentSunday = sundayOf(new Date());
+  loadReview(currentSunday);
+  loadSchedule(currentSunday);
+});
+document.getElementById('saveBtn').addEventListener('click', saveReview);
+
+// "+ Add another" button — append a row matching the question's type
+document.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('add-row')) return;
+  const key = e.target.dataset.key;
+  const goalsContainer = document.querySelector(`.q-goals[data-key="${key}"]`);
+  if (goalsContainer) {
+    const next = goalsContainer.children.length + 1;
+    const row = document.createElement('div');
+    row.className = 'goal-row';
+    row.innerHTML = `
+      <span class="num">${next}.</span>
+      <textarea class="auto-grow goal-input" rows="1" placeholder="Priority..."></textarea>
+      <select class="goal-status">
+        ${STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+      </select>
+      <textarea class="auto-grow goal-outcome" rows="1" placeholder="What actually happened?"></textarea>
+    `;
+    const sel = row.querySelector('.goal-status');
+    sel.dataset.value = sel.value;
+    goalsContainer.appendChild(row);
+    autoGrowAll(row);
+    row.querySelector('.goal-input').focus();
+    return;
+  }
+  const listContainer = document.querySelector(`.q-list[data-key="${key}"]`);
+  if (!listContainer) return;
+  const next = listContainer.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'list-row';
+  row.innerHTML = `<span class="num">${next}.</span><textarea class="auto-grow" rows="1"></textarea>`;
+  listContainer.appendChild(row);
+  autoGrowAll(row);
+  row.querySelector('textarea').focus();
+});
+
+// Enter in a list/goal field jumps to next row (Shift+Enter for actual newline)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.shiftKey) return;
+  const field = e.target;
+
+  if (field.matches('.list-row textarea')) {
+    e.preventDefault();
+    const container = field.closest('.q-list');
+    const allRows = Array.from(container.children);
+    const idx = allRows.indexOf(field.closest('.list-row'));
+    if (idx < allRows.length - 1) {
+      allRows[idx + 1].querySelector('textarea').focus();
+    } else {
+      const key = container.dataset.key;
+      document.querySelector(`.add-row[data-key="${key}"]`).click();
+    }
+  } else if (field.matches('.goal-row .goal-input, .goal-row .goal-outcome')) {
+    e.preventDefault();
+    const container = field.closest('.q-goals');
+    const allRows = Array.from(container.children);
+    const idx = allRows.indexOf(field.closest('.goal-row'));
+    if (idx < allRows.length - 1) {
+      allRows[idx + 1].querySelector('.goal-input').focus();
+    } else {
+      const key = container.dataset.key;
+      document.querySelector(`.add-row[data-key="${key}"]`).click();
+    }
+  }
+});
+
+// Auto-grow textareas as the user types; refresh carried priorities when a Q2
+// priority text is edited; refresh postponed checkmarks when Q5 changes.
+document.addEventListener('input', (e) => {
+  if (e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
+  if (e.target.classList && e.target.classList.contains('goal-input')) refreshCarriedPriorities();
+  if (e.target.closest && e.target.closest('.q-list[data-key="next_priorities"]')) refreshPostponedChecked();
+});
+
+// Postponed checkbox toggled — sync into Q5
+document.addEventListener('change', (e) => {
+  if (!e.target.matches('.postponed-item input[type="checkbox"]')) return;
+  const item = e.target.closest('.postponed-item');
+  const text = item.dataset.text;
+  const list = document.querySelector('.q-list[data-key="next_priorities"]');
+  if (!list) return;
+
+  if (e.target.checked) {
+    // Already in Q5? do nothing. Otherwise drop into the first empty row, or add a new row.
+    const rows = Array.from(list.children);
+    const already = rows.some(r => r.querySelector('textarea').value.trim() === text);
+    if (!already) {
+      let target = rows.find(r => !r.querySelector('textarea').value.trim());
+      if (!target) {
+        document.querySelector('.add-row[data-key="next_priorities"]').click();
+        target = list.lastElementChild;
+      }
+      const ta = target.querySelector('textarea');
+      ta.value = text;
+      autoGrow(ta);
+    }
+    item.classList.add('checked');
+  } else {
+    // Remove the matching Q5 row's text (leave the row in place, just clear it)
+    const rows = Array.from(list.children);
+    const match = rows.find(r => r.querySelector('textarea').value.trim() === text);
+    if (match) {
+      const ta = match.querySelector('textarea');
+      ta.value = '';
+      autoGrow(ta);
+    }
+    item.classList.remove('checked');
+  }
+});
+
+// Status dropdown: keep data-value in sync so CSS can color it,
+// and re-evaluate which priorities should carry over to Q5.
+document.addEventListener('change', (e) => {
+  if (!e.target.classList.contains('goal-status')) return;
+  e.target.dataset.value = e.target.value;
+  refreshCarriedPriorities();
+});
+
+// ---------- Init ----------
+renderQuestions();
+fillAnswers(null); // make sure the empty numbered rows are there before any async work
+loadReview(currentSunday);
+loadSchedule(currentSunday);
+loadPastReviews();
+loadPostponedProjects();
+</script>
+</body>
+</html>

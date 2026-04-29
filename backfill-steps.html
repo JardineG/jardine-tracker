@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>One-time Steps Backfill · Jardine Tracker</title>
+<style>
+  :root {
+    --bg: #f7f3ec; --panel: #ffffff; --ink: #1f2933;
+    --muted: #6b7280; --line: #e7e1d4; --gold: #c89a3a;
+    --teal: #1f5f5f; --teal-soft: #d8ebe9;
+    --green: #2d5a3d; --green-soft: #dceadf;
+    --red: #7a2030; --red-soft: #f3dadd;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+  }
+  .wrap { max-width: 640px; margin: 40px auto; padding: 24px; }
+  h1 { margin: 0 0 4px; font-size: 24px; font-weight: 800; }
+  h1 span { color: var(--gold); }
+  .sub { color: var(--muted); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 24px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px; margin-bottom: 16px;
+  }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0 0; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 10px; text-align: center; }
+  .stat .num { font-size: 22px; font-weight: 800; color: var(--ink); }
+  .stat .lbl { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+  button {
+    padding: 12px 24px; background: var(--gold); color: #fff; border: 0; border-radius: 8px;
+    font-weight: 700; cursor: pointer; font-size: 14px; font-family: inherit;
+    letter-spacing: 0.5px;
+  }
+  button:hover { opacity: 0.92; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status {
+    padding: 12px 16px; border-radius: 8px; margin-top: 12px;
+    font-size: 13px; line-height: 1.5; display: none;
+  }
+  .status.show { display: block; }
+  .status.info  { background: var(--teal-soft); color: var(--teal); }
+  .status.ok    { background: var(--green-soft); color: var(--green); }
+  .status.err   { background: var(--red-soft);   color: var(--red); }
+
+  .small { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  ul.preview { font-family: ui-monospace, "SF Mono", Menlo, Monaco, monospace; font-size: 12px; color: var(--muted); padding-left: 18px; max-height: 160px; overflow-y: auto; margin: 0; }
+  ul.preview li { margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Steps <span>backfill</span></h1>
+  <div class="sub">One-time tool · delete this file after</div>
+
+  <div class="card">
+    <div style="font-weight:700; margin-bottom:6px;">What this does</div>
+    <div style="color:var(--muted); line-height:1.5;">
+      Imports your daily Total Steps from your Apple Watch (HealthKit export, Jan 1 → today)
+      directly into your tracker's <strong>localStorage</strong> on this browser. Days you've
+      already filled in manually are <strong>skipped</strong> — never overwritten.
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="num">117</div><div class="lbl">Days</div></div>
+      <div class="stat"><div class="num">1.53M</div><div class="lbl">Total steps</div></div>
+      <div class="stat"><div class="num">13,119</div><div class="lbl">Avg / day</div></div>
+    </div>
+    <div class="small" style="margin-top:12px;">
+      <strong>Important:</strong> Run this in the same browser where you normally view the tracker.
+      localStorage is per-browser — running it on a different device won't help that device.
+    </div>
+  </div>
+
+  <div class="card" id="readyCard">
+    <div style="font-weight:700; margin-bottom:6px;">Ready to run</div>
+    <div style="color:var(--muted); line-height:1.5;" id="currentInfo">Checking your current data…</div>
+    <div style="margin-top:12px;">
+      <button id="runBtn">Backfill 117 days of steps</button>
+    </div>
+    <div class="status" id="runStatus"></div>
+    <div class="small" id="runDetail" style="display:none; margin-top: 12px;">
+      <div style="font-weight:600; margin-bottom: 4px;">Preview (first 10 days that will be written):</div>
+      <ul class="preview" id="runPreview"></ul>
+    </div>
+  </div>
+
+  <div class="small" style="text-align:center;">
+    After this finishes, open Daily Habits → Month view → page back to January. Step values should be populated.<br>
+    Then delete <code>backfill-steps.html</code> from your local <code>Jardine Tracker</code> folder and redeploy.
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'infiniteYouTracker_v1';
+
+// 117 daily totals from Apple Watch (Jan 1 → Apr 27, 2026)
+const STEPS = {
+    "2026-01-01": 23188, "2026-01-02": 10495, "2026-01-03": 11418, "2026-01-04": 12361,
+    "2026-01-05": 13609, "2026-01-06": 10779, "2026-01-07": 13226, "2026-01-08": 12398,
+    "2026-01-09": 12014, "2026-01-10": 5275,  "2026-01-11": 14735, "2026-01-12": 12973,
+    "2026-01-13": 2644,  "2026-01-14": 13401, "2026-01-15": 12621, "2026-01-16": 16141,
+    "2026-01-17": 12753, "2026-01-18": 14440, "2026-01-19": 12240, "2026-01-20": 2118,
+    "2026-01-21": 10008, "2026-01-22": 11945, "2026-01-23": 10949, "2026-01-24": 13398,
+    "2026-01-25": 12645, "2026-01-26": 13398, "2026-01-27": 5169,  "2026-01-28": 12142,
+    "2026-01-29": 11995, "2026-01-30": 5592,  "2026-01-31": 20776, "2026-02-01": 18250,
+    "2026-02-02": 11868, "2026-02-03": 2338,  "2026-02-04": 12532, "2026-02-05": 1045,
+    "2026-02-06": 7754,  "2026-02-07": 9597,  "2026-02-08": 3196,  "2026-02-09": 13034,
+    "2026-02-10": 12761, "2026-02-11": 11975, "2026-02-12": 12532, "2026-02-13": 12047,
+    "2026-02-14": 11185, "2026-02-15": 18187, "2026-02-16": 14365, "2026-02-17": 14473,
+    "2026-02-18": 12611, "2026-02-19": 16608, "2026-02-20": 12833, "2026-02-21": 13701,
+    "2026-02-22": 16845, "2026-02-23": 15022, "2026-02-24": 13110, "2026-02-25": 12375,
+    "2026-02-26": 12408, "2026-02-27": 12665, "2026-02-28": 20306, "2026-03-01": 20572,
+    "2026-03-02": 12243, "2026-03-03": 12296, "2026-03-04": 13026, "2026-03-05": 12378,
+    "2026-03-06": 14380, "2026-03-07": 17794, "2026-03-08": 12593, "2026-03-09": 13231,
+    "2026-03-10": 12236, "2026-03-11": 11729, "2026-03-12": 17807, "2026-03-13": 14756,
+    "2026-03-14": 5687,  "2026-03-15": 12738, "2026-03-16": 15005, "2026-03-17": 11049,
+    "2026-03-18": 12516, "2026-03-19": 12332, "2026-03-20": 14374, "2026-03-21": 11450,
+    "2026-03-22": 15044, "2026-03-23": 13309, "2026-03-24": 13886, "2026-03-25": 14706,
+    "2026-03-26": 14825, "2026-03-27": 12756, "2026-03-28": 20933, "2026-03-29": 21039,
+    "2026-03-30": 7224,  "2026-03-31": 12768, "2026-04-01": 11425, "2026-04-02": 16023,
+    "2026-04-03": 25199, "2026-04-04": 16244, "2026-04-05": 16343, "2026-04-06": 19259,
+    "2026-04-07": 13489, "2026-04-08": 19384, "2026-04-09": 21847, "2026-04-10": 19276,
+    "2026-04-11": 10954, "2026-04-12": 14066, "2026-04-13": 12739, "2026-04-14": 12283,
+    "2026-04-15": 14984, "2026-04-16": 11423, "2026-04-17": 13338, "2026-04-18": 13846,
+    "2026-04-19": 12342, "2026-04-20": 13762, "2026-04-21": 12934, "2026-04-22": 12723,
+    "2026-04-23": 12222, "2026-04-24": 12598, "2026-04-25": 13843, "2026-04-26": 14652,
+    "2026-04-27": 8577
+};
+
+function setStatus(msg, kind) {
+  const el = document.getElementById('runStatus');
+  el.textContent = msg;
+  el.className = 'status show ' + (kind || 'info');
+}
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+// Show how many days currently have a Total Steps value
+(function showCurrent() {
+  const s = loadState();
+  const info = document.getElementById('currentInfo');
+  if (!s || !s.daily) {
+    info.textContent = 'No tracker state found in this browser yet — running this will create it. (If you expected to see existing data, you may be on a different browser/device than where you use the tracker.)';
+    return;
+  }
+  const targetDates = Object.keys(STEPS);
+  const filled = targetDates.filter(d => {
+    const v = s.daily[d] && s.daily[d].walk12k;
+    return typeof v === 'number' && v > 0;
+  }).length;
+  info.innerHTML = `Of the 117 days I'd import, your tracker already has Total Steps set for <strong>${filled}</strong>. The other <strong>${117 - filled}</strong> are blank — those will be filled.`;
+})();
+
+document.getElementById('runBtn').addEventListener('click', () => {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = 'Working...';
+
+  let s = loadState() || {};
+  s.daily = s.daily || {};
+
+  let added = 0, skipped = 0;
+  const previewWrites = [];
+  for (const [date, steps] of Object.entries(STEPS)) {
+    const dayObj = s.daily[date] || {};
+    if (typeof dayObj.walk12k === 'number' && dayObj.walk12k > 0) {
+      skipped++;
+      continue;
+    }
+    dayObj.walk12k = steps;
+    s.daily[date] = dayObj;
+    if (previewWrites.length < 10) previewWrites.push(`${date}: ${steps.toLocaleString()} steps`);
+    added++;
+  }
+
+  if (added === 0) {
+    setStatus(`Nothing to backfill — all 117 days already have a value (skipped ${skipped}).`, 'info');
+    btn.disabled = false; btn.textContent = 'Backfill 117 days of steps';
+    return;
+  }
+
+  document.getElementById('runDetail').style.display = 'block';
+  document.getElementById('runPreview').innerHTML =
+    previewWrites.map(w => `<li>${w}</li>`).join('') +
+    (added > 10 ? `<li>...and ${added - 10} more</li>` : '');
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  } catch (e) {
+    setStatus('Save failed: ' + e.message, 'err');
+    btn.disabled = false; btn.textContent = 'Backfill 117 days of steps';
+    return;
+  }
+
+  setStatus(`Done — backfilled ${added} days. Skipped ${skipped}. Open the Daily Habits page to see them.`, 'ok');
+  btn.textContent = 'Backfilled ✓';
+});
+</script>
+</body>
+</html>

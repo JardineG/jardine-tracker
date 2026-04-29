@@ -1,0 +1,2436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>infinite YOU · Habit Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #f7f3ec;
+    --panel: #ffffff;
+    --ink: #1f2933;
+    --muted: #6b7280;
+    --line: #e7e1d4;
+    --gold: #c89a3a;
+    --teal: #1f5f5f;
+    --teal-soft: #d8ebe9;
+    --red: #7a2030;
+    --red-soft: #f3dadd;
+    --green: #2d5a3d;
+    --green-soft: #dceadf;
+    --today: #fff7df;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+  }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  .header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 20px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+  .brand h1 span { color: var(--gold); }
+  .brand .sub { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .month-nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .month-nav button {
+    background: transparent; border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 10px; cursor: pointer; font-size: 14px; color: var(--ink);
+  }
+  .month-nav button:hover { background: var(--panel); }
+  .month-label { font-weight: 700; font-size: 16px; min-width: 200px; text-align: center; }
+  .view-tabs { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .view-tab {
+    padding: 6px 14px; border: 0; background: transparent; cursor: pointer;
+    font-size: 13px; font-weight: 600; color: var(--muted); border-right: 1px solid var(--line);
+    font-family: inherit;
+  }
+  .view-tab:last-child { border-right: 0; }
+  .view-tab.active { background: var(--gold); color: #fff; }
+  .view-tab:hover:not(.active) { background: var(--bg); color: var(--ink); }
+
+  /* Day view list */
+  .day-list { padding: 6px 0; }
+  .day-row {
+    display: flex; align-items: center; padding: 14px 18px; gap: 14px;
+    border-bottom: 1px solid var(--line); transition: background 0.12s;
+  }
+  .day-row:last-child { border-bottom: 0; }
+  .day-row:hover { background: var(--bg); }
+  .day-row .name { flex: 1; font-size: 15px; font-weight: 500; }
+  .day-row .streak { font-size: 12px; color: var(--muted); font-weight: 600; min-width: 50px; text-align: right; }
+  .day-row .streak .fire { color: var(--gold); margin-right: 2px; }
+  .day-row .control { flex-shrink: 0; min-width: 100px; display: flex; justify-content: flex-end; }
+  .day-row .circle { width: 28px; height: 28px; border-width: 2px; }
+  .day-row .circle.done::after { width: 7px; height: 13px; border-width: 0 3px 3px 0; transform: rotate(45deg) translate(-2px, -1px); }
+  .day-row .num-input { width: 90px; height: 36px; font-size: 15px; border-width: 2px; border-radius: 8px; }
+  .day-row .gym-boxes { gap: 6px; }
+  .day-row .gym-box { width: 26px; height: 26px; border-width: 2px; border-radius: 6px; }
+  .day-row .gym-box.on::after { width: 6px; height: 11px; border-width: 0 3px 3px 0; transform: rotate(45deg) translate(-2px, -1px); }
+
+  /* Stats strip */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; position: relative; overflow: hidden;
+  }
+  .stat .label { font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .stat .value { font-size: 28px; font-weight: 800; line-height: 1; }
+  .stat .value small { font-size: 14px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .stat.flame { background: linear-gradient(135deg, #fff 0%, #fff5d6 100%); }
+  .stat.gold { border-color: var(--gold); }
+  .ring { width: 56px; height: 56px; position: absolute; right: 12px; top: 12px; }
+
+  /* Section */
+  .section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+  .section-head { padding: 10px 16px; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #fff; }
+  .section-head .meta { float: right; font-weight: 500; opacity: 0.85; letter-spacing: 1px; font-size: 11px; }
+  .morning .section-head { background: var(--teal); }
+  .evening .section-head { background: var(--red); }
+  .weekly .section-head { background: var(--green); }
+
+  /* Grid */
+  .grid-wrap { overflow-x: auto; }
+  table.grid { border-collapse: collapse; width: 100%; min-width: 900px; }
+  table.grid th, table.grid td { padding: 0; text-align: center; }
+  table.grid thead th {
+    font-weight: 600; font-size: 11px; color: var(--muted); padding: 8px 0;
+    border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1;
+  }
+  table.grid thead th.day-num { font-weight: 700; font-size: 13px; color: var(--ink); padding-top: 0; padding-bottom: 8px; }
+  table.grid thead th.weekend { color: var(--gold); }
+  table.grid thead th.week-num {
+    font-size: 9px; letter-spacing: 1.5px; color: var(--gold); font-weight: 700;
+    text-transform: uppercase; padding: 6px 4px 4px;
+    border-bottom: 2px solid #f0e8d3;
+    background: #fbf7ec;
+  }
+  table.grid thead th.today-col { background: var(--today); border-radius: 6px 6px 0 0; }
+  table.grid tbody td.today-col { background: var(--today); }
+  table.grid tbody tr:hover { background: rgba(0,0,0,0.015); }
+  table.grid td.habit-name {
+    text-align: left; padding: 8px 12px; font-size: 13px; min-width: 250px; max-width: 250px;
+    border-right: 1px solid var(--line); background: var(--panel); position: sticky; left: 0; z-index: 2;
+  }
+  table.grid tbody tr:hover td.habit-name { background: #faf7f0; }
+  table.grid td.streak-cell {
+    text-align: right; padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--muted);
+    border-right: 1px solid var(--line); min-width: 70px; background: var(--panel);
+    position: sticky; left: 250px; z-index: 2;
+  }
+  table.grid tbody tr:hover td.streak-cell { background: #faf7f0; }
+  .streak-cell .fire { color: var(--gold); margin-right: 2px; }
+  table.grid tbody tr.weekly-summary-row td {
+    background: var(--teal-soft); color: var(--teal);
+    font-size: 12px; font-style: italic; text-align: center;
+    padding: 6px 12px; border-bottom: 1px solid var(--line);
+    position: static;
+  }
+  table.grid tbody tr.weekly-summary-row:hover td { background: var(--teal-soft); }
+  table.grid tbody tr.weekly-summary-row strong { font-weight: 700; font-style: normal; }
+  .cell { width: 30px; height: 30px; }
+  .num-cell { width: 44px; height: 30px; padding: 0 2px; }
+  .num-input {
+    width: 40px; height: 22px; border: 1.5px solid; border-radius: 5px;
+    text-align: center; font-size: 11px; font-weight: 700; background: transparent;
+    padding: 0; font-family: inherit; box-sizing: border-box;
+    -moz-appearance: textfield; appearance: textfield;
+  }
+  .num-input::-webkit-outer-spin-button,
+  .num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .num-input:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .num-input:disabled { opacity: 0.25; cursor: not-allowed; }
+  .morning .num-input { border-color: var(--teal); color: var(--teal); }
+  .morning .num-input.has-val { background: var(--teal-soft); }
+  .morning .num-input.hit { background: var(--teal); color: #fff; }
+  .evening .num-input { border-color: var(--red); color: var(--red); }
+  .evening .num-input.has-val { background: var(--red-soft); }
+  .evening .num-input.hit { background: var(--red); color: #fff; }
+  /* Time input — same styling as num-input but slightly wider cell */
+  .time-cell { width: 56px; height: 30px; padding: 0 2px; }
+  .time-input {
+    width: 52px; height: 22px; border: 1.5px solid; border-radius: 5px;
+    text-align: center; font-size: 11px; font-weight: 700; background: transparent;
+    padding: 0 2px; font-family: inherit; box-sizing: border-box;
+  }
+  .time-input:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .time-input:disabled { opacity: 0.25; cursor: not-allowed; }
+  .morning .time-input { border-color: var(--teal); color: var(--teal); }
+  .morning .time-input.has-val { background: var(--teal-soft); }
+  .morning .time-input.hit { background: var(--teal); color: #fff; }
+  .day-row .time-input { width: 110px; height: 36px; font-size: 15px; border-width: 2px; border-radius: 8px; }
+  .circle {
+    width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid;
+    margin: 0 auto; cursor: pointer; transition: all 0.15s ease;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .circle:hover { transform: scale(1.15); }
+  .morning .circle { border-color: var(--teal); }
+  .morning .circle.done { background: var(--teal); box-shadow: 0 0 0 2px var(--teal-soft); }
+  .evening .circle { border-color: var(--red); }
+  .evening .circle.done { background: var(--red); box-shadow: 0 0 0 2px var(--red-soft); }
+  .weekly .circle { border-color: var(--green); }
+  .weekly .circle.done { background: var(--green); box-shadow: 0 0 0 2px var(--green-soft); }
+  .circle.done::after {
+    content: ''; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .circle.future { opacity: 0.25; cursor: not-allowed; }
+  .circle.future:hover { transform: none; }
+
+  /* Heatmap */
+  .heatmap { display: flex; gap: 2px; padding: 4px 12px; align-items: center; }
+  .heatmap .sq { width: 8px; height: 8px; border-radius: 2px; background: #ece6d6; }
+  .heatmap .sq.on { background: var(--teal); }
+  .evening .heatmap .sq.on { background: var(--red); }
+  .weekly .heatmap .sq.on { background: var(--green); }
+
+  /* Weekly section */
+  .weekly-grid { display: grid; grid-template-columns: 230px repeat(auto-fit, minmax(140px, 1fr)); gap: 0; }
+  .weekly-grid .wh-head { padding: 10px 12px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--line); text-align: center; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+  .weekly-grid .wh-head.first { text-align: left; }
+  .weekly-grid .wh-head.current { background: var(--today); }
+  .weekly-grid .wrow { display: contents; }
+  .weekly-grid .wcell { padding: 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
+  .weekly-grid .wcell.first { justify-content: flex-start; font-size: 13px; font-weight: 500; }
+  .weekly-grid .wcell.current { background: var(--today); }
+  .gym-boxes { display: flex; gap: 4px; }
+  .gym-box {
+    width: 18px; height: 18px; border: 1.5px solid var(--green); border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gym-box.on { background: var(--green); }
+  .gym-box.on::after {
+    content: ''; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 30px; padding-top: 16px; border-top: 2px solid var(--gold);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  .footer .left { font-weight: 700; color: var(--gold); letter-spacing: 1px; }
+  .footer .center { font-weight: 800; font-size: 16px; letter-spacing: 1px; text-align: center; flex: 1; }
+  .footer .right { font-size: 12px; color: var(--muted); }
+
+  /* Today panel */
+  .today-panel {
+    background: linear-gradient(135deg, #fff7df 0%, #fff 100%);
+    border: 1px solid var(--gold); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .today-panel .title { font-size: 12px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; font-weight: 700; }
+  .today-panel .date { font-size: 22px; font-weight: 800; margin-top: 2px; }
+  .today-panel .progress-bar { flex: 1; min-width: 200px; height: 14px; background: #f0e8d3; border-radius: 8px; overflow: hidden; position: relative; }
+  .today-panel .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #e6b85c); transition: width 0.3s ease; }
+  .today-panel .pct { font-size: 28px; font-weight: 800; }
+
+  /* Goals card */
+  .goals-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 16px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;
+  }
+  .goals-section { border-left: 3px solid var(--gold); padding-left: 14px; position: relative; }
+  .goals-section h3 {
+    margin: 0 0 8px 0; font-size: 11px; letter-spacing: 2px; color: var(--muted);
+    text-transform: uppercase; font-weight: 700;
+  }
+  .goals-section .big { font-size: 22px; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
+  .goals-section .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .goals-section .pace { font-size: 12px; font-weight: 600; color: var(--teal); margin-top: 4px; }
+  .goals-section.weight        { border-color: var(--teal); }
+  .goals-section.morning-steps { border-color: #c89a3a; }
+  .goals-section.steps         { border-color: var(--gold); }
+  .goals-section.calories      { border-color: var(--red); }
+  .goals-section.protein       { border-color: var(--green); }
+  .goals-section .edit-btn {
+    position: absolute; right: 0; top: 0; background: transparent; border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 11px; color: var(--muted);
+  }
+  .goals-section .edit-btn:hover { background: var(--bg); color: var(--ink); }
+  .goals-section .empty { font-size: 13px; color: var(--muted); font-style: italic; }
+  .mini-bar { height: 6px; background: #f0e8d3; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .mini-bar .fill { height: 100%; background: linear-gradient(90deg, var(--gold), #e6b85c); }
+
+  /* Overview page */
+  .overview-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .overview-stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 18px; border-top: 3px solid var(--teal);
+  }
+  .overview-stat.gain { border-top-color: var(--red); }
+  .overview-stat.flat { border-top-color: var(--muted); }
+  .overview-stat .label { font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+  .overview-stat .value { font-size: 26px; font-weight: 800; line-height: 1.1; margin-top: 4px; }
+  .overview-stat .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .chart-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 16px;
+  }
+  .chart-card h3 { margin: 0 0 4px 0; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+  .chart-card .ch-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .chart-card svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .empty-state { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 14px; }
+  .roc-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px;
+    font-weight: 700; margin-left: 6px; vertical-align: middle;
+  }
+  .roc-pill.loss { background: #d8ebe9; color: var(--teal); }
+  .roc-pill.gain { background: #f3dadd; color: var(--red); }
+  .roc-pill.flat { background: #f0e8d3; color: #6b6248; }
+
+  /* Activity card (Apple Watch style) */
+  .activity-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 16px;
+  }
+  .activity-card .ac-head {
+    display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap;
+    gap: 12px; margin-bottom: 14px;
+  }
+  .activity-card h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.3px; }
+  .activity-card .ac-stats { display: flex; gap: 18px; }
+  .activity-card .ac-stat { text-align: right; }
+  .activity-card .ac-stat .v { font-size: 18px; font-weight: 800; line-height: 1; }
+  .activity-card .ac-stat .l { font-size: 10px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+  .ac-charts { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; }
+  @media (max-width: 700px) { .ac-charts { grid-template-columns: 1fr; gap: 18px; } }
+  .ac-chart .ac-title { font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+  .bars { display: flex; align-items: flex-end; height: 100px; gap: 4px; padding: 0 2px; border-bottom: 1px solid var(--line); position: relative; }
+  .bars .bar {
+    flex: 1; min-width: 0; background: #ece6d6; border-radius: 3px 3px 0 0;
+    position: relative; transition: background 0.15s;
+  }
+  .bars .bar.hit { background: var(--teal); }
+  .bars .bar.over { background: var(--red); }
+  .bars .bar.today { box-shadow: 0 0 0 2px var(--gold); }
+  .bars .bar.zero { min-height: 2px; }
+  .bars .target-line {
+    position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed var(--gold);
+    pointer-events: none;
+  }
+  .bar-labels { display: flex; gap: 4px; padding: 4px 2px 0; }
+  .bar-labels .bl { flex: 1; min-width: 0; text-align: center; font-size: 10px; color: var(--muted); font-weight: 600; }
+  .bar-labels .bl.today { color: var(--gold); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--panel); border-radius: 14px; padding: 24px; max-width: 460px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2); border-top: 4px solid var(--gold);
+  }
+  .modal h2 { margin: 0 0 6px 0; font-size: 20px; font-weight: 800; }
+  .modal .modal-sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .modal label { display: block; margin-bottom: 14px; font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .modal label input {
+    display: block; width: 100%; margin-top: 6px; padding: 10px 12px; font-size: 15px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+    font-family: inherit; box-sizing: border-box;
+  }
+  .modal label input:focus { outline: 2px solid var(--gold); border-color: var(--gold); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+  .modal-actions button {
+    padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink); font-family: inherit;
+  }
+  .modal-actions button.primary { background: var(--gold); color: #fff; border-color: var(--gold); }
+  .modal-actions button:hover { transform: translateY(-1px); }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 10px; }
+    .brand h1 { font-size: 20px; }
+    .header { flex-direction: column; align-items: stretch; gap: 10px; padding-bottom: 10px; }
+    .month-nav { width: 100%; justify-content: space-between; gap: 6px; }
+    .month-nav button { padding: 6px 8px; font-size: 13px; }
+    .view-tab { padding: 6px 10px; font-size: 12px; }
+    .month-label { min-width: 0; flex: 1; font-size: 13px; padding: 0 4px; }
+    .goals-card { grid-template-columns: 1fr; padding: 14px 16px; gap: 16px; }
+    .goals-section { padding-left: 12px; }
+    .goals-section .edit-btn { font-size: 11px; padding: 3px 7px; }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat { padding: 10px 12px; }
+    .stat .value { font-size: 22px; }
+    .stat .label { font-size: 10px; letter-spacing: 1px; }
+    .today-panel { padding: 12px 14px; gap: 10px; }
+    .today-panel .date { font-size: 17px; }
+    .today-panel .pct { font-size: 22px; }
+    .section-head { font-size: 11px; padding: 8px 12px; letter-spacing: 1px; }
+    .section-head .meta { float: none; display: block; margin-top: 3px; opacity: 0.85; }
+    .day-row { padding: 12px 14px; gap: 10px; }
+    .day-row .name { font-size: 14px; }
+    .day-row .streak { min-width: 36px; font-size: 11px; }
+    .day-row .control { min-width: 80px; }
+    .day-row .num-input { width: 76px; }
+    table.grid td.habit-name { min-width: 150px; max-width: 150px; font-size: 12px; }
+    table.grid td.streak-cell { left: 150px; min-width: 54px; padding: 0 8px; font-size: 11px; }
+    .modal { padding: 18px; }
+    .modal h2 { font-size: 17px; }
+    .footer .center { font-size: 13px; }
+  }
+
+  /* Top navigation across pages */
+  .top-nav {
+    display: flex; gap: 4px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .top-nav a {
+    padding: 10px 18px; text-decoration: none; color: var(--muted);
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .top-nav a:hover { color: var(--ink); }
+  .top-nav a.active { color: var(--ink); border-bottom-color: var(--gold); }
+
+  /* Auth overlay (login gate) */
+  .auth-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000; padding: 24px;
+  }
+  .auth-overlay.show { display: flex; }
+  .auth-box {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 32px 28px; max-width: 380px; width: 100%;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+  .auth-box h2 {
+    margin: 0 0 6px; font-size: 22px; font-weight: 800; letter-spacing: -0.3px;
+  }
+  .auth-box h2 span { color: var(--gold); }
+  .auth-box .auth-sub {
+    color: var(--muted); font-size: 13px; margin-bottom: 20px; line-height: 1.5;
+  }
+  .auth-box input[type="email"] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 15px; font-family: inherit; margin-bottom: 12px;
+  }
+  .auth-box input[type="email"]:focus { outline: none; border-color: var(--gold); }
+  .auth-box button {
+    width: 100%; padding: 10px 14px; background: var(--teal); color: #fff;
+    border: 0; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+    font-family: inherit;
+  }
+  .auth-box button:hover { opacity: 0.92; }
+  .auth-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .auth-status {
+    margin-top: 14px; font-size: 13px; padding: 10px 12px; border-radius: 6px;
+    display: none;
+  }
+  .auth-status.show { display: block; }
+  .auth-status.info { background: var(--teal-soft); color: var(--teal); }
+  .auth-status.error { background: var(--red-soft); color: var(--red); }
+  .auth-signout {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
+    font-family: inherit;
+  }
+  .auth-signout:hover { background: var(--panel); color: var(--ink); }
+
+  /* Health sync card */
+  .health-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 16px; display: none;
+  }
+  .health-card.show { display: block; }
+  .health-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .health-card-head .label {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+  }
+  .health-card-head .badge {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 4px; background: var(--teal-soft); color: var(--teal);
+  }
+  .health-metrics {
+    display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .health-metric {
+    display: flex; flex-direction: column; gap: 2px; min-width: 80px;
+  }
+  .health-metric .val { font-size: 22px; font-weight: 800; line-height: 1; }
+  .health-metric .unit { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .health-metric .override-note { font-size: 10px; color: var(--gold); font-weight: 600; }
+
+  /* Memento Mori */
+  .memento-head { background: #2d2d2d; }
+  .mm-head-meta { float: right; font-weight: 500; opacity: 0.8; font-size: 11px; font-style: italic; letter-spacing: 0; }
+  .mm-body { padding: 16px; }
+  .mm-setup { padding: 16px; }
+  .mm-setup p { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .mm-setup-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .mm-setup input[type="date"] {
+    height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: var(--bg);
+  }
+  .mm-save-btn {
+    background: var(--ink); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit;
+  }
+  .mm-save-btn:hover { opacity: 0.8; }
+  .mm-chart-row { display: flex; gap: 10px; align-items: flex-start; overflow-x: auto; padding-bottom: 4px; }
+  .mm-grid-wrap { flex-shrink: 0; }
+  .mm-grid { display: grid; grid-template-columns: repeat(52, 6px); gap: 1px; }
+  .mm-cell { width: 6px; height: 6px; border-radius: 1px; background: var(--line); }
+  .mm-cell.lived { background: var(--ink); }
+  .mm-cell.current { background: var(--gold); box-shadow: 0 0 3px var(--gold); }
+  .mm-labels-col { position: relative; flex-shrink: 0; width: 28px; }
+  .mm-label { position: absolute; left: 0; font-size: 10px; color: var(--muted); font-weight: 600; line-height: 1; transform: translateY(-50%); }
+  .mm-legend { margin-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .mm-legend-cell { display: inline-block; width: 8px; height: 8px; border-radius: 1px; background: var(--line); vertical-align: middle; }
+  .mm-legend-cell.lived { background: var(--ink); }
+  .mm-legend-cell.current { background: var(--gold); }
+  .mm-edit { margin-top: 10px; }
+  .mm-change-btn {
+    background: none; border: 1px solid var(--line); border-radius: 6px;
+    padding: 4px 10px; cursor: pointer; font-size: 11px; color: var(--muted); font-family: inherit;
+  }
+  .mm-change-btn:hover { background: var(--bg); color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- Login gate: shown until user is signed in -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <h2>infinite <span>YOU</span></h2>
+    <div class="auth-sub">Sign in with your email. We'll send you a one-click link — no password to remember.</div>
+    <form id="authForm">
+      <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" required />
+      <button type="submit" id="authSubmit">Send magic link</button>
+    </form>
+    <div class="auth-status" id="authStatus"></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <nav class="top-nav">
+    <a href="index.html" class="active">Daily Habits</a>
+    <a href="weekly-review.html">Weekly Review</a>
+    <a href="books.html">Books</a>
+    <a href="movies.html">Movies</a>
+    <a href="places.html">Places</a>
+  </nav>
+
+  <div class="header">
+    <div class="brand">
+      <div>
+        <h1>infinite <span>YOU</span></h1>
+        <div class="sub">Daily Habit Tracker · Jardine Gerodias</div>
+      </div>
+    </div>
+    <div class="month-nav">
+      <div class="view-tabs">
+        <button class="view-tab" data-view="day">Day</button>
+        <button class="view-tab" data-view="week">Week</button>
+        <button class="view-tab active" data-view="month">Month</button>
+        <button class="view-tab" data-view="overview">Overview</button>
+      </div>
+      <button id="prev">←</button>
+      <div class="month-label" id="monthLabel"></div>
+      <button id="next">→</button>
+      <button id="today-btn">Today</button>
+    </div>
+  </div>
+
+  <!-- Goals card -->
+  <div class="goals-card" id="goalsCard"></div>
+
+  <!-- Today focus panel -->
+  <div class="today-panel" id="todayPanel"></div>
+
+  <!-- Health sync card -->
+  <div class="health-card" id="healthCard">
+    <div class="health-card-head">
+      <span class="label">Apple Health · synced automatically</span>
+      <span class="badge" id="healthBadge">synced</span>
+    </div>
+    <div class="health-metrics" id="healthMetrics"></div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats" id="stats"></div>
+
+  <!-- Overview view (hidden unless overview mode) -->
+  <div id="overviewView" style="display:none"></div>
+
+  <!-- Tracker container (hidden in overview mode) -->
+  <div id="trackerView">
+
+  <!-- Morning -->
+  <div class="section morning">
+    <div class="section-head">Morning · Update before 8 AM <span class="meta" id="morningMeta"></span></div>
+    <div class="grid-wrap" id="morningWrap"></div>
+  </div>
+
+  <!-- Evening -->
+  <div class="section evening">
+    <div class="section-head">Evening · Update before 7 PM <span class="meta" id="eveningMeta"></span></div>
+    <div class="grid-wrap" id="eveningWrap"></div>
+  </div>
+
+  <!-- Weekly -->
+  <div class="section weekly">
+    <div class="section-head">Weekly <span class="meta" id="weeklyMeta"></span></div>
+    <div class="weekly-grid" id="weeklyGrid"></div>
+  </div>
+
+  <!-- Memento Mori -->
+  <div id="mementoSection"></div>
+
+  </div><!-- /trackerView -->
+
+  <div class="footer">
+    <div class="left">NO ZERO DAYS.</div>
+    <div class="center">MY LOVE AND GREATNESS MOVES MOUNTAINS.</div>
+    <div class="right">Jardine Gerodias</div>
+  </div>
+</div>
+
+<!-- Weight goal modal (steps + nutrition targets now live in the Weekly Review) -->
+<div class="modal-overlay" id="goalsModal">
+  <div class="modal">
+    <h2>Edit Weight Goal</h2>
+    <div class="modal-sub">Used to compute pace and trend. Daily steps, calories, and protein targets now live in the Weekly Review.</div>
+    <label>Goal weight (lbs)
+      <input type="number" id="gm-weight" step="0.1" placeholder="e.g. 165" />
+    </label>
+    <label>Target date
+      <input type="date" id="gm-weight-date" />
+    </label>
+    <div class="modal-actions">
+      <button id="gm-cancel">Cancel</button>
+      <button class="primary" id="gm-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Habits config ----------
+const morningHabits = [
+  { id: 'wake', name: 'Wake time', type: 'time', target: '04:00' },
+  { id: 'starter', name: 'Starter Activation Declaration', type: 'check' },
+  { id: 'meditate', name: 'Meditate', type: 'check' },
+  { id: 'journal', name: 'Journal', type: 'check' },
+  { id: 'read', name: 'Read (30+ min)', type: 'check' },
+  { id: 'protein_shake', name: 'Protein shake', type: 'check' },
+  { id: 'lesson', name: 'Online lesson', type: 'check' },
+  { id: 'no_social', name: 'No social media', type: 'check' },
+  { id: 'weight', name: 'Weight (lbs)', type: 'number', unit: 'lbs' },
+  { id: 'walk6k', name: 'Morning Steps Target', type: 'number', unit: 'steps', target: 6000 },
+];
+const eveningHabits = [
+  { id: 'fiction', name: 'Read fiction', type: 'check' },
+  { id: 'evening_journal', name: 'Evening journal', type: 'check' },
+  { id: 'homecoming', name: 'Homecoming Declaration', type: 'check' },
+  { id: 'walk12k', name: 'Total Steps', type: 'number', unit: 'steps', target: 12000 },
+  { id: 'calorie_goal', name: 'Total Calories', type: 'number', unit: 'cal' },
+  { id: 'protein_goal', name: 'Total Protein', type: 'number', unit: 'g' },
+];
+const weeklyHabits = [
+  { id: 'gym', name: 'Gym / Weight Training (4x)', type: 'count', target: 4 },
+  { id: 'weekly_review', name: 'Weekly Review', type: 'check' },
+  { id: 'calendar', name: 'Calendar check + priorities', type: 'check' },
+  { id: 'date_gen', name: 'Date with Gen', type: 'check' },
+  { id: 'movies', name: 'Movies with Family', type: 'check' },
+];
+
+// ---------- Supabase client ----------
+const SUPABASE_URL = 'https://prqpnfrfwquncyfysvks.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_zXQdgBgA0DXTf7julXpQkw_A4Gd-57l';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null;
+
+// ---------- State ----------
+const STORAGE_KEY = 'infiniteYouTracker_v1';
+let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+function ensureStateShape() {
+  if (!state.daily) state.daily = {};
+  if (!state.weekly) state.weekly = {};
+  if (!state.goals) state.goals = {}; // { weight: {target, targetDate}, steps: {annual} }
+  if (!state.weeklyGoals) state.weeklyGoals = {}; // { 'YYYY-Www': { protein, calorie } }
+  if (!state.profile) state.profile = {};
+  if (!state.profile.birthday) state.profile.birthday = '1975-10-14';
+  backfillHealthData();
+  backfillWeeklyGoals();
+}
+
+function backfillHealthData() {
+  // Source: Kaizen S8 (Aug–Nov 2025) + S9 (Feb–Apr 2026) Excel trackers, Apr 26 from Apple Health export
+  const known = {
+    '2025-08-05': { calorie_goal: 1669, protein_goal: 109 },
+    '2025-08-06': { calorie_goal: 2095, protein_goal: 244 },
+    '2025-08-07': { calorie_goal: 2311, protein_goal: 95 },
+    '2025-08-08': { calorie_goal: 1503, protein_goal: 121 },
+    '2025-08-09': { calorie_goal: 1557, protein_goal: 132 },
+    '2025-08-10': { calorie_goal: 1553, protein_goal: 70 },
+    '2025-08-11': { calorie_goal: 1137, protein_goal: 115 },
+    '2025-08-12': { calorie_goal: 1752, protein_goal: 170 },
+    '2025-08-13': { calorie_goal: 1748, protein_goal: 134 },
+    '2025-08-14': { calorie_goal: 1705, protein_goal: 128 },
+    '2025-08-15': { calorie_goal: 1908, protein_goal: 205 },
+    '2025-08-16': { calorie_goal: 1322, protein_goal: 144 },
+    '2025-08-17': { calorie_goal: 1893, protein_goal: 137 },
+    '2025-08-18': { calorie_goal: 1457, protein_goal: 119 },
+    '2025-08-19': { calorie_goal: 1728, protein_goal: 137 },
+    '2025-08-20': { calorie_goal: 1746, protein_goal: 130 },
+    '2025-08-21': { calorie_goal: 1430, protein_goal: 125 },
+    '2025-08-22': { calorie_goal: 1544, protein_goal: 185 },
+    '2025-08-23': { calorie_goal: 1815, protein_goal: 180 },
+    '2025-08-24': { calorie_goal: 1256, protein_goal: 116 },
+    '2025-08-25': { calorie_goal: 1449, protein_goal: 156 },
+    '2025-08-26': { calorie_goal: 1420, protein_goal: 143 },
+    '2025-08-27': { calorie_goal: 1447, protein_goal: 142 },
+    '2025-08-28': { calorie_goal: 1098, protein_goal: 140 },
+    '2025-08-29': { calorie_goal: 1490, protein_goal: 165 },
+    '2025-08-30': { calorie_goal: 1678, protein_goal: 147 },
+    '2025-08-31': { calorie_goal: 1742, protein_goal: 171 },
+    '2025-09-01': { calorie_goal: 1280, protein_goal: 157 },
+    '2025-09-02': { calorie_goal: 1476, protein_goal: 162 },
+    '2025-09-03': { calorie_goal: 1960, protein_goal: 158 },
+    '2025-09-04': { calorie_goal: 2252, protein_goal: 167 },
+    '2025-09-05': { calorie_goal: 1549, protein_goal: 148 },
+    '2025-09-06': { calorie_goal: 1535, protein_goal: 168 },
+    '2025-09-07': { calorie_goal: 1583, protein_goal: 155 },
+    '2025-09-08': { calorie_goal: 1281, protein_goal: 161 },
+    '2025-09-09': { calorie_goal: 1516, protein_goal: 182 },
+    '2025-09-10': { calorie_goal: 1499, protein_goal: 181 },
+    '2025-09-11': { calorie_goal: 1546, protein_goal: 164 },
+    '2025-09-12': { calorie_goal: 1597, protein_goal: 148 },
+    '2025-09-13': { calorie_goal: 1659, protein_goal: 149 },
+    '2025-09-14': { calorie_goal: 1387, protein_goal: 157 },
+    '2025-09-15': { calorie_goal: 1435, protein_goal: 171 },
+    '2025-09-16': { calorie_goal: 1482, protein_goal: 149 },
+    '2025-09-17': { calorie_goal: 1377, protein_goal: 160 },
+    '2025-09-18': { calorie_goal: 1593, protein_goal: 170 },
+    '2025-09-19': { calorie_goal: 1511, protein_goal: 174 },
+    '2025-09-20': { calorie_goal: 1592, protein_goal: 175 },
+    '2025-09-21': { calorie_goal: 1510, protein_goal: 164 },
+    '2025-09-22': { calorie_goal: 1362, protein_goal: 170 },
+    '2025-09-23': { calorie_goal: 1437, protein_goal: 155 },
+    '2025-09-24': { calorie_goal: 1427, protein_goal: 155 },
+    '2025-09-25': { calorie_goal: 1299, protein_goal: 188 },
+    '2025-09-26': { calorie_goal: 1234, protein_goal: 165 },
+    '2025-09-27': { calorie_goal: 1523, protein_goal: 191 },
+    '2025-09-28': { calorie_goal: 1411, protein_goal: 158 },
+    '2025-09-29': { calorie_goal: 1449, protein_goal: 159 },
+    '2025-09-30': { calorie_goal: 1684, protein_goal: 151 },
+    '2025-10-01': { calorie_goal: 1532, protein_goal: 152 },
+    '2025-10-02': { calorie_goal: 1570, protein_goal: 153 },
+    '2025-10-03': { calorie_goal: 1593, protein_goal: 150 },
+    '2025-10-04': { calorie_goal: 1368, protein_goal: 155 },
+    '2025-10-05': { calorie_goal: 1573, protein_goal: 151 },
+    '2025-10-06': { calorie_goal: 1437, protein_goal: 166 },
+    '2025-10-07': { calorie_goal: 1600, protein_goal: 154 },
+    '2025-10-08': { calorie_goal: 1731, protein_goal: 164 },
+    '2025-10-09': { calorie_goal: 1434, protein_goal: 159 },
+    '2025-10-10': { calorie_goal: 1511, protein_goal: 161 },
+    '2025-10-11': { calorie_goal: 1400, protein_goal: 160 },
+    '2025-10-12': { calorie_goal: 1682, protein_goal: 173 },
+    '2025-10-13': { calorie_goal: 1480, protein_goal: 164 },
+    '2025-10-14': { calorie_goal: 1635, protein_goal: 172 },
+    '2025-10-15': { calorie_goal: 1409, protein_goal: 157 },
+    '2025-10-16': { calorie_goal: 1338, protein_goal: 176 },
+    '2025-10-17': { calorie_goal: 1900, protein_goal: 180 },
+    '2025-10-18': { calorie_goal: 1500, protein_goal: 164 },
+    '2025-10-19': { calorie_goal: 1476, protein_goal: 170 },
+    '2025-10-20': { calorie_goal: 1326, protein_goal: 147 },
+    '2025-10-21': { calorie_goal: 1514, protein_goal: 144 },
+    '2025-10-22': { calorie_goal: 1310, protein_goal: 162 },
+    '2025-10-23': { calorie_goal: 2021, protein_goal: 192 },
+    '2025-10-24': { calorie_goal: 1735, protein_goal: 206 },
+    '2025-10-25': { calorie_goal: 1306, protein_goal: 139 },
+    '2025-10-26': { calorie_goal: 1841, protein_goal: 146 },
+    '2025-10-27': { calorie_goal: 1724, protein_goal: 177 },
+    '2025-10-28': { calorie_goal: 1543, protein_goal: 157 },
+    '2025-10-29': { calorie_goal: 1600, protein_goal: 157 },
+    '2025-10-30': { calorie_goal: 1638, protein_goal: 190 },
+    '2025-10-31': { calorie_goal: 1770, protein_goal: 169 },
+    '2025-11-01': { calorie_goal: 1684, protein_goal: 166 },
+    '2025-11-02': { calorie_goal: 1515, protein_goal: 179 },
+    '2025-11-03': { calorie_goal: 1724 },
+    '2025-11-04': { calorie_goal: 1543 },
+    '2025-11-05': { calorie_goal: 1600 },
+    '2025-11-06': { calorie_goal: 1638 },
+    '2025-11-07': { calorie_goal: 1770 },
+    '2025-11-08': { calorie_goal: 1684 },
+    '2025-11-09': { calorie_goal: 1515 },
+    '2026-02-02': { calorie_goal: 1445, protein_goal: 139 },
+    '2026-02-03': { calorie_goal: 1169, protein_goal: 86 },
+    '2026-02-04': { calorie_goal: 1896, protein_goal: 152 },
+    '2026-02-05': { calorie_goal: 1559, protein_goal: 69 },
+    '2026-02-06': { calorie_goal: 1991, protein_goal: 142 },
+    '2026-02-07': { calorie_goal: 2090, protein_goal: 134 },
+    '2026-02-09': { calorie_goal: 1616, protein_goal: 174 },
+    '2026-02-10': { calorie_goal: 1622, protein_goal: 170 },
+    '2026-02-11': { calorie_goal: 1684, protein_goal: 180 },
+    '2026-02-12': { calorie_goal: 1675, protein_goal: 180 },
+    '2026-02-13': { calorie_goal: 1703, protein_goal: 199 },
+    '2026-02-14': { calorie_goal: 1690, protein_goal: 179 },
+    '2026-02-16': { calorie_goal: 1678, protein_goal: 185 },
+    '2026-02-17': { calorie_goal: 1548, protein_goal: 177 },
+    '2026-02-18': { calorie_goal: 1592, protein_goal: 159 },
+    '2026-02-19': { calorie_goal: 1842, protein_goal: 155 },
+    '2026-02-20': { calorie_goal: 1756, protein_goal: 130 },
+    '2026-02-21': { calorie_goal: 1578, protein_goal: 159 },
+    '2026-02-23': { calorie_goal: 1455, protein_goal: 163 },
+    '2026-02-24': { calorie_goal: 1476, protein_goal: 153 },
+    '2026-02-25': { calorie_goal: 1432, protein_goal: 130 },
+    '2026-02-26': { calorie_goal: 1548, protein_goal: 158 },
+    '2026-02-27': { calorie_goal: 1500, protein_goal: 141 },
+    '2026-02-28': { calorie_goal: 1750, protein_goal: 142 },
+    '2026-03-02': { calorie_goal: 1564, protein_goal: 160 },
+    '2026-03-03': { calorie_goal: 1482, protein_goal: 178 },
+    '2026-03-04': { calorie_goal: 1473, protein_goal: 153 },
+    '2026-03-05': { calorie_goal: 1498, protein_goal: 158 },
+    '2026-03-06': { calorie_goal: 1456, protein_goal: 153 },
+    '2026-03-07': { calorie_goal: 1276, protein_goal: 144 },
+    '2026-03-09': { calorie_goal: 1466, protein_goal: 149 },
+    '2026-03-10': { calorie_goal: 1472, protein_goal: 145 },
+    '2026-03-11': { calorie_goal: 1438, protein_goal: 149 },
+    '2026-03-12': { calorie_goal: 1544, protein_goal: 166 },
+    '2026-03-13': { calorie_goal: 1559, protein_goal: 94 },
+    '2026-03-14': { calorie_goal: 1417, protein_goal: 142 },
+    '2026-03-16': { calorie_goal: 1353, protein_goal: 141 },
+    '2026-03-17': { calorie_goal: 1365, protein_goal: 142 },
+    '2026-03-18': { calorie_goal: 1290, protein_goal: 151 },
+    '2026-03-19': { calorie_goal: 1393, protein_goal: 147 },
+    '2026-03-20': { calorie_goal: 1580, protein_goal: 117 },
+    '2026-03-21': { calorie_goal: 1293, protein_goal: 150 },
+    '2026-03-23': { calorie_goal: 1426, protein_goal: 143 },
+    '2026-03-24': { calorie_goal: 1400, protein_goal: 136 },
+    '2026-03-25': { calorie_goal: 1440, protein_goal: 147 },
+    '2026-03-26': { calorie_goal: 1465, protein_goal: 163 },
+    '2026-03-27': { calorie_goal: 1551, protein_goal: 139 },
+    '2026-03-28': { calorie_goal: 1503, protein_goal: 142 },
+    '2026-03-30': { calorie_goal: 1500, protein_goal: 97 },
+    '2026-03-31': { calorie_goal: 1415, protein_goal: 148 },
+    '2026-04-01': { calorie_goal: 1183, protein_goal: 130 },
+    '2026-04-02': { calorie_goal: 1638, protein_goal: 162 },
+    '2026-04-03': { calorie_goal: 1910, protein_goal: 193 },
+    '2026-04-04': { calorie_goal: 1299, protein_goal: 117 },
+    '2026-04-06': { calorie_goal: 1593, protein_goal: 131 },
+    '2026-04-07': { calorie_goal: 1496, protein_goal: 167 },
+    '2026-04-08': { calorie_goal: 1475, protein_goal: 134 },
+    '2026-04-09': { calorie_goal: 1227, protein_goal: 118 },
+    '2026-04-10': { calorie_goal: 2029, protein_goal: 157 },
+    '2026-04-11': { calorie_goal: 1348, protein_goal: 159 },
+    '2026-04-13': { calorie_goal: 1242, protein_goal: 146 },
+    '2026-04-14': { calorie_goal: 1272, protein_goal: 146 },
+    '2026-04-15': { calorie_goal: 1500, protein_goal: 168 },
+    '2026-04-16': { calorie_goal: 1332, protein_goal: 155 },
+    '2026-04-17': { calorie_goal: 1360, protein_goal: 154 },
+    '2026-04-18': { calorie_goal: 1321, protein_goal: 140 },
+    '2026-04-20': { calorie_goal: 1380, protein_goal: 162 },
+    '2026-04-21': { calorie_goal: 1347, protein_goal: 142 },
+    '2026-04-22': { calorie_goal: 1309, protein_goal: 145 },
+    '2026-04-23': { calorie_goal: 1430, protein_goal: 142 },
+    '2026-04-24': { calorie_goal: 1338, protein_goal: 151 },
+    '2026-04-25': { calorie_goal: 1423, protein_goal: 156 },
+    '2026-04-26': { calorie_goal: 1771, protein_goal: 119 },
+    '2026-04-27': { calorie_goal: 1337, protein_goal: 137 },
+    '2026-04-28': { calorie_goal: 1334, protein_goal: 137 },
+    // Sundays previously missed (S9 dates at col 9, outside old range)
+    '2026-02-08': { calorie_goal: 1686, protein_goal: 80  },
+    '2026-02-15': { calorie_goal: 1762, protein_goal: 158 },
+    '2026-02-22': { calorie_goal: 1618, protein_goal: 158 },
+    '2026-03-01': { calorie_goal: 2202, protein_goal: 145 },
+    '2026-03-08': { calorie_goal: 1454, protein_goal: 133 },
+    '2026-03-15': { calorie_goal: 1467, protein_goal: 148 },
+    '2026-03-22': { calorie_goal: 2386, protein_goal: 132 },
+    '2026-03-29': { calorie_goal: 1750, protein_goal: 98  },
+    '2026-04-05': { calorie_goal: 1500, protein_goal: 143 },
+    '2026-04-12': { calorie_goal: 1286, protein_goal: 141 },
+    '2026-04-19': { calorie_goal: 1329, protein_goal: 146 },
+  };
+  let changed = false;
+  for (const [date, vals] of Object.entries(known)) {
+    if (!state.daily[date]) state.daily[date] = {};
+    for (const [key, val] of Object.entries(vals)) {
+      if (state.daily[date][key] == null) {
+        state.daily[date][key] = val;
+        changed = true;
+      }
+    }
+  }
+  if (changed) save();
+}
+
+function backfillWeeklyGoals() {
+  // Source: Kaizen S8 (W31–W45 2025) + S9 (W5–W18 2026) weekly tracker targets + gym attendance
+  const known = {
+    '2025-W31': { steps: 5000,  gym: 4 }, // 7 logged but capped at 4 (Mt. Fuji week)
+    '2025-W32': { steps: 5000,  calorie: 1875, protein: 150, gym: 3 },
+    '2025-W33': { steps: 5000,  calorie: 1700, protein: 130, gym: 3 },
+    '2025-W34': { steps: 5000,  calorie: 1700, protein: 130, gym: 4 },
+    '2025-W35': { steps: 6000,  calorie: 1700, protein: 140, gym: 4 },
+    '2025-W36': { steps: 8000,  calorie: 1766, protein: 145, gym: 4 },
+    '2025-W37': { steps: 8000,  calorie: 1600, protein: 145, gym: 4 },
+    '2025-W38': { steps: 9000,  calorie: 1600, protein: 145, gym: 4 },
+    '2025-W39': { steps: 10000, calorie: 1500, protein: 150, gym: 4 },
+    '2025-W40': { steps: 10500, calorie: 1500, protein: 150, gym: 4 },
+    '2025-W41': { steps: 11500, calorie: 1550, protein: 150, gym: 4 },
+    '2025-W42': { steps: 11500, calorie: 1550, protein: 150, gym: 4 },
+    '2025-W43': { steps: 11500, calorie: 1900, protein: 170, gym: 4 },
+    '2025-W44': { steps: 12000, calorie: 1550, protein: 150, gym: 4 },
+    '2026-W05': { steps: 12000, gym: 3 },
+    '2026-W06': { steps: 10000, calorie: 1500, protein: 130, gym: 3 },
+    '2026-W07': { steps: 10000, calorie: 1700, protein: 130, gym: 4 },
+    '2026-W08': { steps: 12000, calorie: 1600, protein: 140, gym: 4 },
+    '2026-W09': { steps: 12000, calorie: 1500, protein: 130, gym: 4 },
+    '2026-W10': { steps: 12000, calorie: 1500, protein: 130, gym: 4 },
+    '2026-W11': { steps: 12000, calorie: 1500, protein: 140, gym: 4 },
+    '2026-W12': { steps: 12000, calorie: 1500, protein: 130, gym: 4 },
+    '2026-W13': { steps: 12000, calorie: 1500, protein: 130, gym: 4 },
+    '2026-W14': { steps: 12000, calorie: 1500, protein: 130, gym: 4 },
+    '2026-W15': { steps: 12000, calorie: 1500, protein: 130, gym: 4 },
+    '2026-W16': { steps: 12000, calorie: 1400, protein: 130, gym: 4 },
+    '2026-W17': { steps: 12000, calorie: 1400, protein: 130, gym: 4 },
+    '2026-W18': { steps: 12000, calorie: 1350, protein: 130, gym: 2 },
+  };
+  let changed = false;
+  for (const [week, vals] of Object.entries(known)) {
+    if (!state.weeklyGoals[week]) state.weeklyGoals[week] = {};
+    const wg = state.weeklyGoals[week];
+    if (vals.calorie != null && wg.calorie == null) { wg.calorie = vals.calorie; changed = true; }
+    if (vals.protein != null && wg.protein == null) { wg.protein = vals.protein; changed = true; }
+    if (vals.steps   != null && wg.morning_steps == null) { wg.morning_steps = vals.steps; changed = true; }
+    // Gym attendance goes in state.weekly, not weeklyGoals
+    if (vals.gym != null) {
+      if (!state.weekly[week]) state.weekly[week] = {};
+      if (state.weekly[week].gym == null) { state.weekly[week].gym = vals.gym; changed = true; }
+    }
+  }
+  if (changed) save();
+}
+ensureStateShape();
+
+// Save: write to browser immediately (instant), push to cloud after 800ms of idle.
+// initialPullDone blocks cloud pushes until pullStateFromCloud has decided what
+// to do — without it, a stale local state could race the pull and overwrite
+// the cloud (e.g. on a slow phone, fetchHealthSync's prefill could push a sparse
+// state up before pull finishes).
+let cloudSaveTimer = null;
+let initialPullDone = false;
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!currentUser) return; // not signed in yet — skip cloud
+  if (!initialPullDone) return; // pull hasn't finished — don't risk overwriting cloud
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(pushStateToCloud, 800);
+}
+async function pushStateToCloud() {
+  if (!currentUser) return;
+  const { error } = await sb
+    .from('tracker_state')
+    .upsert({ user_id: currentUser.id, state: state, updated_at: new Date().toISOString() });
+  if (error) console.error('Cloud save failed:', error);
+}
+async function pullStateFromCloud() {
+  if (!currentUser) return;
+  const { data, error } = await sb
+    .from('tracker_state')
+    .select('state')
+    .eq('user_id', currentUser.id)
+    .maybeSingle();
+  if (error) { console.error('Cloud load failed:', error); return; } // leave initialPullDone=false so we don't push over cloud
+  if (data && data.state && Object.keys(data.state).length) {
+    state = data.state;
+    ensureStateShape();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    initialPullDone = true;
+  } else {
+    // First time signing in — push whatever's in localStorage up as seed.
+    // Mark pull-done BEFORE the push so pushStateToCloud's gate doesn't bail.
+    initialPullDone = true;
+    await pushStateToCloud();
+  }
+}
+
+let viewDate = new Date();
+let viewMode = localStorage.getItem('viewMode') || 'month'; // 'day' | 'week' | 'month'
+const todayDate = new Date();
+const dayLabels = ['Su','M','T','W','Th','F','Sa'];
+
+function getViewDates() {
+  if (viewMode === 'day') return [new Date(viewDate)];
+  if (viewMode === 'week') {
+    const s = startOfWeek(viewDate);
+    return Array.from({length:7}, (_,i) => addDays(s,i));
+  }
+  const y = viewDate.getFullYear(), m = viewDate.getMonth();
+  return Array.from({length: daysInMonth(y,m)}, (_,i) => new Date(y,m,i+1));
+}
+
+// ---------- Date helpers ----------
+function ymd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function isSameDay(a, b) { return ymd(a) === ymd(b); }
+function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
+function getISOWeek(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  const weekNum = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+  return date.getUTCFullYear() + '-W' + String(weekNum).padStart(2,'0');
+}
+// Get Monday of the week containing date d
+function startOfWeek(d) {
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7; // 0=Mon
+  x.setDate(x.getDate() - day);
+  x.setHours(0,0,0,0);
+  return x;
+}
+
+// Average of logged values for the week containing refDate. Skips days with no value.
+// For current week: Mon → today. For past weeks: Mon → Sun.
+function weekToDateAvg(habitId, refDate) {
+  refDate = refDate || todayDate;
+  const ws = startOfWeek(refDate);
+  const we = new Date(ws); we.setDate(we.getDate() + 6);
+  const end = we < todayDate ? we : todayDate;
+  let total = 0, days = 0;
+  for (let d = new Date(ws); d <= end; d.setDate(d.getDate() + 1)) {
+    const v = state.daily[ymd(d)]?.[habitId];
+    if (typeof v === 'number' && v > 0) { total += v; days++; }
+  }
+  return days > 0 ? Math.round(total / days) : null;
+}
+
+// Count of days where logged value < target for the week containing refDate.
+function weekBelowTargetCount(habitId, target, refDate) {
+  if (!target) return null;
+  const ws = startOfWeek(refDate || todayDate);
+  let below = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(ws); d.setDate(d.getDate() + i);
+    const v = state.daily[ymd(d)]?.[habitId];
+    if (typeof v === 'number' && v > 0 && v < target) below++;
+  }
+  return below;
+}
+
+// Count of days where logged value >= target for the week containing refDate.
+function weekHitTargetCount(habitId, target, refDate) {
+  if (!target) return null;
+  const ws = startOfWeek(refDate || todayDate);
+  let hit = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(ws); d.setDate(d.getDate() + i);
+    const v = state.daily[ymd(d)]?.[habitId];
+    if (typeof v === 'number' && v >= target) hit++;
+  }
+  return hit;
+}
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function fmtRange(start) {
+  const end = addDays(start, 6);
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(start.getDate()).padStart(2,'0') + '-' + m[start.getMonth()] + ' to ' +
+         String(end.getDate()).padStart(2,'0') + '-' + m[end.getMonth()];
+}
+
+// ---------- Data accessors ----------
+function getDay(dateStr) { return state.daily[dateStr] || {}; }
+function setDailyHabit(dateStr, habitId, val) {
+  if (!state.daily[dateStr]) state.daily[dateStr] = {};
+  const truthy = val === true
+    || (typeof val === 'number' && val > 0)
+    || (typeof val === 'string' && val.length > 0);
+  if (truthy) state.daily[dateStr][habitId] = val;
+  else delete state.daily[dateStr][habitId];
+  if (Object.keys(state.daily[dateStr]).length === 0) delete state.daily[dateStr];
+  save();
+}
+
+// Normalize time input like "4:15", "415", "0415" → "04:15"
+function normalizeTime(raw) {
+  if (!raw) return null;
+  let v = raw.replace(/[^0-9:]/g, '');
+  if (!v.includes(':')) {
+    if (v.length === 3) v = v[0] + ':' + v.slice(1);
+    else if (v.length === 4) v = v.slice(0,2) + ':' + v.slice(2);
+    else return null;
+  }
+  const parts = v.split(':');
+  if (parts.length !== 2) return null;
+  const h = parseInt(parts[0],10), m = parseInt(parts[1],10);
+  if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+function getWeek(weekStr) { return state.weekly[weekStr] || {}; }
+function setWeeklyHabit(weekStr, habitId, val) {
+  if (!state.weekly[weekStr]) state.weekly[weekStr] = {};
+  state.weekly[weekStr][habitId] = val;
+  save();
+}
+
+// ---------- Stats ----------
+function isProteinHit(dateStr) {
+  const val = getDay(dateStr)['protein_goal'];
+  if (!val) return false;
+  const wg = state.weeklyGoals[getISOWeek(new Date(dateStr + 'T00:00:00'))] || {};
+  const target = wg.protein;
+  return target ? val >= target : !!val;
+}
+function dayCompletion(dateStr) {
+  const all = [...morningHabits, ...eveningHabits];
+  const day = getDay(dateStr);
+  const done = all.filter(h => h.id === 'protein_goal' ? isProteinHit(dateStr) : day[h.id]).length;
+  return { done, total: all.length, pct: Math.round((done/all.length)*100) };
+}
+function isZeroDay(dateStr) {
+  const day = getDay(dateStr);
+  return Object.values(day).filter(Boolean).length === 0;
+}
+function noZeroDayStreak() {
+  // count back from today (or yesterday if today is empty) consecutive non-zero days
+  let streak = 0;
+  let cur = new Date(todayDate);
+  // include today if it has any
+  if (isZeroDay(ymd(cur))) cur = addDays(cur, -1);
+  while (!isZeroDay(ymd(cur))) {
+    streak++;
+    cur = addDays(cur, -1);
+    if (streak > 1000) break;
+  }
+  return streak;
+}
+function longestNoZeroStreak() {
+  const dates = Object.keys(state.daily).filter(d => !isZeroDay(d)).sort();
+  if (dates.length === 0) return 0;
+  let longest = 1, cur = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(dates[i-1]);
+    const next = new Date(dates[i]);
+    const diff = Math.round((next - prev) / 86400000);
+    if (diff === 1) { cur++; longest = Math.max(longest, cur); }
+    else cur = 1;
+  }
+  return longest;
+}
+function habitStreak(habitId) {
+  const isDone = habitId === 'protein_goal'
+    ? d => isProteinHit(ymd(d))
+    : d => getDay(ymd(d))[habitId];
+  let streak = 0;
+  let cur = new Date(todayDate);
+  if (!isDone(cur)) cur = addDays(cur, -1);
+  while (isDone(cur)) {
+    streak++;
+    cur = addDays(cur, -1);
+    if (streak > 1000) break;
+  }
+  return streak;
+}
+function weekGymCount() {
+  const w = getISOWeek(todayDate);
+  return getWeek(w).gym || 0;
+}
+
+// ---------- Rendering ----------
+function renderHeader() {
+  const monthsLong = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthsShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  let label = '';
+  if (viewMode === 'month') {
+    label = monthsLong[viewDate.getMonth()] + ' ' + viewDate.getFullYear();
+  } else if (viewMode === 'week') {
+    label = 'Week of ' + fmtRange(startOfWeek(viewDate));
+  } else {
+    label = days[viewDate.getDay()] + ', ' + monthsShort[viewDate.getMonth()] + ' ' + viewDate.getDate() + ', ' + viewDate.getFullYear();
+  }
+  document.getElementById('monthLabel').textContent = label;
+}
+
+function renderTodayPanel() {
+  const t = ymd(todayDate);
+  const c = dayCompletion(t);
+  const dn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][todayDate.getDay()];
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('todayPanel').innerHTML = `
+    <div>
+      <div class="title">Today</div>
+      <div class="date">${dn}, ${m[todayDate.getMonth()]} ${todayDate.getDate()}</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${c.pct}%"></div></div>
+    <div style="text-align:right">
+      <div class="pct">${c.pct}%</div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px">${c.done} / ${c.total} HABITS</div>
+    </div>
+  `;
+}
+
+function renderStats() {
+  const streak = noZeroDayStreak();
+  const longest = longestNoZeroStreak();
+  const gym = weekGymCount();
+  const t = ymd(todayDate);
+  const c = dayCompletion(t);
+  // 30-day completion
+  let total30 = 0, done30 = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = ymd(addDays(todayDate, -i));
+    const dc = dayCompletion(d);
+    total30 += dc.total; done30 += dc.done;
+  }
+  const pct30 = total30 ? Math.round((done30/total30)*100) : 0;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat flame gold">
+      <div class="label">No Zero Days</div>
+      <div class="value">${streak}<small>day${streak===1?'':'s'}</small></div>
+    </div>
+    <div class="stat">
+      <div class="label">Longest Streak</div>
+      <div class="value">${longest}<small>days</small></div>
+    </div>
+    <div class="stat">
+      <div class="label">Gym This Week</div>
+      <div class="value">${gym}<small>/ 4</small></div>
+    </div>
+    <div class="stat">
+      <div class="label">Today</div>
+      <div class="value">${c.pct}<small>%</small></div>
+    </div>
+    <div class="stat">
+      <div class="label">Last 30 Days</div>
+      <div class="value">${pct30}<small>%</small></div>
+    </div>
+  `;
+}
+
+function renderGrid(wrapId, habits, sectionType) {
+  const wrap = document.getElementById(wrapId);
+  const todayStr = ymd(todayDate);
+  const dates = getViewDates();
+
+  // ---- Day view: render a vertical list ----
+  if (viewMode === 'day') {
+    const date = dates[0];
+    const ds = ymd(date);
+    const isFuture = date > todayDate && ds !== todayStr;
+    let html = '<div class="day-list">';
+    for (const h of habits) {
+      const val = getDay(ds)[h.id];
+      // Day-view streak: same special-case as the week/month table
+      let dayStreakHtml;
+      if (h.id === 'walk12k') {
+        const avg = weekToDateAvg('walk12k', date);
+        dayStreakHtml = avg != null ? fmtNum(avg) : '';
+      } else if (h.id === 'calorie_goal') {
+        const avg = weekToDateAvg('calorie_goal', date);
+        dayStreakHtml = avg != null ? fmtNum(avg) : '';
+      } else if (h.id === 'protein_goal') {
+        const wg = state.weeklyGoals[getISOWeek(date)] || {};
+        const below = weekBelowTargetCount('protein_goal', wg.protein, date);
+        dayStreakHtml = below != null ? `${below}/7 ↓` : '';
+      } else if (h.id === 'weight') {
+        const r = todayROC();
+        if (r && r.roc != null) {
+          const sign = r.roc > 0 ? '+' : '';
+          dayStreakHtml = `${sign}${r.roc.toFixed(2)}%`;
+        } else {
+          dayStreakHtml = '';
+        }
+      } else if (h.id === 'walk6k') {
+        const wg = state.weeklyGoals[getISOWeek(date)] || {};
+        const tgt = wg.morning_steps || h.target;
+        const hit = weekHitTargetCount('walk6k', tgt, date);
+        dayStreakHtml = hit != null ? `${hit}/7 ✓` : '';
+      } else {
+        const s = habitStreak(h.id);
+        dayStreakHtml = s > 0 ? '<span class="fire">🔥</span>' + s : '';
+      }
+      let control = '';
+      if (h.type === 'number') {
+        const has = val != null && val !== '' && val !== false;
+        let target = h.target;
+        if (h.id === 'protein_goal' || h.id === 'calorie_goal') {
+          const wg = state.weeklyGoals[getISOWeek(date)] || {};
+          target = (h.id === 'protein_goal') ? wg.protein : wg.calorie;
+        } else if (h.id === 'walk6k') {
+          const wg = state.weeklyGoals[getISOWeek(date)] || {};
+          target = wg.morning_steps || h.target;
+        }
+        const hit = has && target && (h.id === 'calorie_goal' ? val <= target : val >= target);
+        control = `<input type="number" class="num-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" placeholder="—" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />`;
+      } else if (h.type === 'time') {
+        const has = typeof val === 'string' && val.length > 0;
+        const hit = has && h.target && val <= h.target;
+        control = `<input type="time" class="time-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />`;
+      } else {
+        const done = !!val;
+        control = `<div class="circle ${done?'done':''} ${isFuture?'future':''}" data-date="${ds}" data-habit="${h.id}"></div>`;
+      }
+      html += `<div class="day-row">
+        <div class="name">${h.name}</div>
+        <div class="streak">${dayStreakHtml}</div>
+        <div class="control">${control}</div>
+      </div>`;
+    }
+    html += '</div>';
+    wrap.innerHTML = html;
+    attachCellHandlers(wrap);
+    return;
+  }
+
+  // ---- Week / Month view: render a table ----
+  wrap.innerHTML = `<table class="grid"></table>`;
+  const tbl = wrap.querySelector('table.grid');
+
+  // Header — row 0: week-number spans
+  let thead = '<thead><tr><th class="habit-name"></th><th class="streak-cell"></th>';
+  {
+    let curWeek = null, span = 0;
+    const flush = () => {
+      if (curWeek !== null) {
+        const wkNum = curWeek.split('-W')[1];
+        thead += `<th colspan="${span}" class="week-num">Wk ${wkNum}</th>`;
+      }
+    };
+    for (const date of dates) {
+      const wk = getISOWeek(date);
+      if (wk !== curWeek) { flush(); curWeek = wk; span = 1; }
+      else { span++; }
+    }
+    flush();
+  }
+  thead += '</tr>';
+  // Row 1: day-of-week
+  thead += '<tr><th class="habit-name" style="text-align:left;padding-left:12px">Habit</th><th class="streak-cell">Streak</th>';
+  for (const date of dates) {
+    const dow = date.getDay();
+    const isWk = dow === 0 || dow === 6;
+    const isToday = ymd(date) === todayStr;
+    thead += `<th class="${isWk?'weekend':''} ${isToday?'today-col':''}">${dayLabels[dow]}</th>`;
+  }
+  thead += '</tr><tr><th class="habit-name"></th><th class="streak-cell"></th>';
+  for (const date of dates) {
+    const isToday = ymd(date) === todayStr;
+    thead += `<th class="day-num ${isToday?'today-col':''}">${date.getDate()}</th>`;
+  }
+  thead += '</tr></thead>';
+
+  // Body
+  let tbody = '<tbody>';
+  for (const h of habits) {
+    tbody += `<tr><td class="habit-name">${h.name}</td>`;
+    // For these 3 numeric habits, the "streak" column shows weekly stats instead of a streak count.
+    let streakCellHtml;
+    if (h.id === 'walk12k') {
+      const avg = weekToDateAvg('walk12k', dates[0]);
+      streakCellHtml = avg != null ? `<span title="weekly avg">${fmtNum(avg)}</span>` : '—';
+    } else if (h.id === 'calorie_goal') {
+      const avg = weekToDateAvg('calorie_goal', dates[0]);
+      streakCellHtml = avg != null ? `<span title="weekly avg">${fmtNum(avg)}</span>` : '—';
+    } else if (h.id === 'protein_goal') {
+      const wg = state.weeklyGoals[getISOWeek(dates[0])] || {};
+      const below = weekBelowTargetCount('protein_goal', wg.protein, dates[0]);
+      streakCellHtml = below != null
+        ? `<span title="days below target this week" style="color:${below === 0 ? 'var(--green)' : (below >= 3 ? 'var(--red)' : 'inherit')}">${below}/7 ↓</span>`
+        : '—';
+    } else if (h.id === 'weight') {
+      const r = todayROC();
+      if (r && r.roc != null) {
+        const color = r.roc < -0.05 ? 'var(--teal)' : (r.roc > 0.05 ? 'var(--red)' : '#6b6248');
+        const sign = r.roc > 0 ? '+' : '';
+        streakCellHtml = `<span title="weekly ROC (trend vs ~7d ago)" style="color:${color}">${sign}${r.roc.toFixed(2)}%</span>`;
+      } else {
+        streakCellHtml = '—';
+      }
+    } else if (h.id === 'walk6k') {
+      const wg = state.weeklyGoals[getISOWeek(dates[0])] || {};
+      const tgt = wg.morning_steps || h.target;
+      const hit = weekHitTargetCount('walk6k', tgt, dates[0]);
+      streakCellHtml = hit != null
+        ? `<span title="days hit ≥${fmtNum(tgt)} steps this week" style="color:${hit >= 5 ? 'var(--green)' : (hit <= 2 ? 'var(--red)' : 'inherit')}">${hit}/7 ✓</span>`
+        : '—';
+    } else {
+      const streak = habitStreak(h.id);
+      streakCellHtml = streak > 0 ? '<span class="fire">🔥</span>' + streak : '—';
+    }
+    tbody += `<td class="streak-cell">${streakCellHtml}</td>`;
+    for (const date of dates) {
+      const ds = ymd(date);
+      const isToday = ds === todayStr;
+      const isFuture = date > todayDate && !isToday;
+      const val = getDay(ds)[h.id];
+      if (h.type === 'number') {
+        const has = val != null && val !== '' && val !== false;
+        // Resolve target: static habit target, OR per-week goal for protein/calorie/morning-steps
+        let target = h.target;
+        if (h.id === 'protein_goal' || h.id === 'calorie_goal') {
+          const wg = state.weeklyGoals[getISOWeek(date)] || {};
+          target = (h.id === 'protein_goal') ? wg.protein : wg.calorie;
+        } else if (h.id === 'walk6k') {
+          const wg = state.weeklyGoals[getISOWeek(date)] || {};
+          target = wg.morning_steps || h.target;
+        }
+        const hit = has && target && (h.id === 'calorie_goal' ? val <= target : val >= target);
+        const display = has ? val : '';
+        tbody += `<td class="cell num-cell ${isToday?'today-col':''}">
+          <input type="number" class="num-input ${has?'has-val':''} ${hit?'hit':''}" value="${display}" placeholder="—" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />
+        </td>`;
+      } else if (h.type === 'time') {
+        const has = typeof val === 'string' && val.length > 0;
+        const hit = has && h.target && val <= h.target;
+        tbody += `<td class="cell time-cell ${isToday?'today-col':''}">
+          <input type="text" inputmode="numeric" maxlength="5" class="time-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" placeholder="—" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />
+        </td>`;
+      } else {
+        const done = !!val;
+        tbody += `<td class="cell ${isToday?'today-col':''}">
+          <div class="circle ${done?'done':''} ${isFuture?'future':''}" data-date="${ds}" data-habit="${h.id}"></div>
+        </td>`;
+      }
+    }
+    tbody += '</tr>';
+
+    // Summary sub-row for Steps / Calories / Protein.
+    // - Steps & Calories: average of logged days in the visible range.
+    // - Protein: days-hit count (logged days that met the weekly target).
+    // Range follows the current view (week → 7 days, month → all days in month).
+    if ((h.id === 'walk12k' || h.id === 'calorie_goal' || h.id === 'protein_goal') && viewMode !== 'day') {
+      const label = viewMode === 'month' ? 'Monthly average' : 'Weekly average';
+      let summaryText = '';
+
+      if (h.id === 'protein_goal') {
+        const wg = state.weeklyGoals[getISOWeek(todayDate)] || {};
+        const tgt = wg.protein;
+        let hit = 0, logged = 0;
+        for (const d of dates) {
+          const v = state.daily[ymd(d)]?.[h.id];
+          if (typeof v === 'number' && v > 0) {
+            logged++;
+            if (tgt && v >= tgt) hit++;
+          }
+        }
+        summaryText = logged > 0
+          ? `<strong>${hit} of ${logged} days hit</strong>`
+          : 'No protein logged yet';
+      } else {
+        let total = 0, days = 0;
+        for (const d of dates) {
+          const v = state.daily[ymd(d)]?.[h.id];
+          if (typeof v === 'number' && v > 0) { total += v; days++; }
+        }
+        const avg = days > 0 ? Math.round(total / days) : null;
+        const unit = h.id === 'walk12k' ? 'steps' : 'cal';
+        summaryText = avg != null
+          ? `${label}: <strong>${fmtNum(avg)}</strong> ${unit}`
+          : `${label}: —`;
+      }
+
+      tbody += `<tr class="weekly-summary-row"><td colspan="${dates.length + 2}">${summaryText}</td></tr>`;
+    }
+  }
+  tbody += '</tbody>';
+
+  tbl.innerHTML = thead + tbody;
+  attachCellHandlers(tbl);
+}
+
+function attachCellHandlers(scope) {
+  scope.querySelectorAll('.circle[data-date]').forEach(el => {
+    if (el.classList.contains('future')) return;
+    el.addEventListener('click', () => {
+      const ds = el.dataset.date, hid = el.dataset.habit;
+      const cur = !!getDay(ds)[hid];
+      setDailyHabit(ds, hid, !cur);
+      renderAll();
+    });
+  });
+  scope.querySelectorAll('.num-input').forEach(el => {
+    if (el.disabled) return;
+    el.addEventListener('change', () => {
+      const ds = el.dataset.date, hid = el.dataset.habit;
+      const v = el.value === '' ? null : parseFloat(el.value);
+      setDailyHabit(ds, hid, v);
+      renderAll();
+    });
+  });
+  scope.querySelectorAll('.time-input').forEach(el => {
+    if (el.disabled) return;
+    el.addEventListener('change', () => {
+      const ds = el.dataset.date, hid = el.dataset.habit;
+      const v = normalizeTime(el.value);
+      setDailyHabit(ds, hid, v);
+      renderAll();
+    });
+  });
+}
+
+function renderWeekly() {
+  // Determine which weeks to show based on view mode
+  let weeks = [];
+  if (viewMode === 'month') {
+    const y = viewDate.getFullYear(), m = viewDate.getMonth();
+    const first = new Date(y, m, 1);
+    const last = new Date(y, m+1, 0);
+    let cursor = startOfWeek(first);
+    while (cursor <= last) { weeks.push(new Date(cursor)); cursor = addDays(cursor, 7); }
+  } else {
+    weeks = [startOfWeek(viewDate)];
+  }
+  const todayWeek = ymd(startOfWeek(todayDate));
+
+  const cols = `230px repeat(${weeks.length}, minmax(140px, 1fr))`;
+  const grid = document.getElementById('weeklyGrid');
+  grid.style.gridTemplateColumns = cols;
+
+  let html = '<div class="wh-head first">Week</div>';
+  for (const wk of weeks) {
+    const isCur = ymd(wk) === todayWeek;
+    html += `<div class="wh-head ${isCur?'current':''}">${fmtRange(wk)}</div>`;
+  }
+
+  for (const h of weeklyHabits) {
+    html += `<div class="wcell first">${h.name}</div>`;
+    for (const wk of weeks) {
+      const wkStr = getISOWeek(wk);
+      const isCur = ymd(wk) === todayWeek;
+      const wd = getWeek(wkStr);
+      if (h.type === 'count') {
+        let boxes = '<div class="gym-boxes">';
+        const cnt = wd[h.id] || 0;
+        for (let i = 1; i <= h.target; i++) {
+          boxes += `<div class="gym-box ${i<=cnt?'on':''}" data-week="${wkStr}" data-habit="${h.id}" data-idx="${i}"></div>`;
+        }
+        boxes += '</div>';
+        html += `<div class="wcell ${isCur?'current':''}">${boxes}</div>`;
+      } else {
+        const done = !!wd[h.id];
+        html += `<div class="wcell ${isCur?'current':''}">
+          <div class="circle ${done?'done':''}" data-week="${wkStr}" data-habit="${h.id}" data-type="check"></div>
+        </div>`;
+      }
+    }
+  }
+  grid.innerHTML = html;
+
+  // Handlers
+  grid.querySelectorAll('.circle[data-week]').forEach(el => {
+    el.addEventListener('click', () => {
+      const wk = el.dataset.week, hid = el.dataset.habit;
+      const cur = !!getWeek(wk)[hid];
+      setWeeklyHabit(wk, hid, !cur);
+      renderAll();
+    });
+  });
+  grid.querySelectorAll('.gym-box').forEach(el => {
+    el.addEventListener('click', () => {
+      const wk = el.dataset.week, hid = el.dataset.habit, idx = parseInt(el.dataset.idx);
+      const cur = getWeek(wk)[hid] || 0;
+      // Click on box N: if already at N, drop to N-1; else set to N
+      const next = (cur === idx) ? idx - 1 : idx;
+      setWeeklyHabit(wk, hid, next);
+      renderAll();
+    });
+  });
+}
+
+function renderMeta() {
+  // Section meta: % completion this month
+  const y = viewDate.getFullYear(), m = viewDate.getMonth();
+  const dim = daysInMonth(y, m);
+  function pctFor(habits) {
+    let done = 0, total = 0;
+    for (let d = 1; d <= dim; d++) {
+      const date = new Date(y, m, d);
+      if (date > todayDate) continue;
+      const day = getDay(ymd(date));
+      for (const h of habits) { total++; if (day[h.id]) done++; }
+    }
+    return total ? Math.round((done/total)*100) : 0;
+  }
+  document.getElementById('morningMeta').textContent = pctFor(morningHabits) + '% this month';
+  document.getElementById('eveningMeta').textContent = pctFor(eveningHabits) + '% this month';
+}
+
+// ---------- Trend weight (Hacker's Diet smoothing, alpha=0.1) ----------
+// Returns array of {date, weight, trend, roc} sorted by date.
+function getTrendSeries() {
+  const entries = [];
+  for (const [d, day] of Object.entries(state.daily)) {
+    if (typeof day.weight === 'number' && day.weight > 0) {
+      entries.push({ date: d, weight: day.weight });
+    }
+  }
+  entries.sort((a,b) => a.date.localeCompare(b.date));
+  if (entries.length === 0) return [];
+  let trend = entries[0].weight;
+  for (const e of entries) {
+    trend = trend + 0.1 * (e.weight - trend);
+    e.trend = trend;
+  }
+  // ROC = (today's trend vs trend ~7 days ago) / prior * 100
+  for (let i = 0; i < entries.length; i++) {
+    const target = new Date(entries[i].date);
+    target.setDate(target.getDate() - 7);
+    const targetStr = target.toISOString().slice(0,10);
+    let prior = null;
+    for (let j = i-1; j >= 0; j--) {
+      if (entries[j].date <= targetStr) { prior = entries[j]; break; }
+    }
+    // Fallback: use earliest entry if no exact 7d prior available
+    if (!prior && i > 0) prior = entries[0];
+    if (prior && prior !== entries[i]) {
+      entries[i].roc = ((entries[i].trend - prior.trend) / prior.trend) * 100;
+      entries[i].lbsChange = entries[i].trend - prior.trend;
+    }
+  }
+  return entries;
+}
+
+function todayROC() {
+  const series = getTrendSeries();
+  if (series.length === 0) return null;
+  return series[series.length - 1];
+}
+
+// ---------- Goals card ----------
+function latestWeight() {
+  const dates = Object.keys(state.daily).sort().reverse();
+  for (const d of dates) { if (state.daily[d].weight) return { val: state.daily[d].weight, date: d }; }
+  return null;
+}
+function ytdSteps() {
+  const year = todayDate.getFullYear();
+  let total = 0;
+  for (const [d, day] of Object.entries(state.daily)) {
+    if (!d.startsWith(year + '-')) continue;
+    if (day.walk12k) total += day.walk12k;
+  }
+  return total;
+}
+function fmtNum(n) { return n.toLocaleString('en-US'); }
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return m[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
+function daysBetween(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+
+function renderGoals() {
+  const card = document.getElementById('goalsCard');
+  const wg = state.goals.weight || {};
+  const sg = state.goals.steps || {};
+  const lw = latestWeight();
+  const todayStr = ymd(todayDate);
+  const wkStr = getISOWeek(viewDate);
+  const wkGoal = state.weeklyGoals[wkStr] || {};
+
+  // Weight section
+  let weightHtml = '';
+  if (wg.target) {
+    const cur = lw ? lw.val : null;
+    const togo = cur != null ? (cur - wg.target).toFixed(1) : '—';
+    const direction = cur != null && cur > wg.target ? 'lose' : (cur != null && cur < wg.target ? 'gain' : '');
+    let pace = '';
+    if (cur != null && wg.targetDate) {
+      const days = daysBetween(todayStr, wg.targetDate);
+      if (days > 0) {
+        const lbsPerWeek = ((cur - wg.target) / days * 7).toFixed(2);
+        pace = `${Math.abs(lbsPerWeek)} lbs/week to ${direction || 'hit'} goal · ${days} days left`;
+      } else {
+        pace = days === 0 ? 'Target date is today' : 'Target date passed';
+      }
+    }
+    const roc = todayROC();
+    let rocHtml = '';
+    if (roc && roc.roc != null) {
+      const cls = roc.roc < -0.05 ? 'loss' : (roc.roc > 0.05 ? 'gain' : 'flat');
+      const sign = roc.roc > 0 ? '+' : '';
+      rocHtml = `<span class="roc-pill ${cls}">${sign}${roc.roc.toFixed(2)}% / wk</span>`;
+    }
+    weightHtml = `
+      <div class="big">${cur != null ? cur : '—'} <span style="font-size:13px;color:var(--muted);font-weight:500">→ ${wg.target} lbs</span>${rocHtml}</div>
+      <div class="sub">${cur != null ? Math.abs(togo) + ' lbs to go' : 'Log a weight to start tracking'}${wg.targetDate ? ' · target ' + fmtDate(wg.targetDate) : ''}${roc && roc.trend ? ' · trend ' + roc.trend.toFixed(1) + ' lbs' : ''}</div>
+      ${pace ? `<div class="pace">${pace}</div>` : ''}
+    `;
+  } else {
+    const roc = todayROC();
+    let inline = '';
+    if (roc && roc.roc != null) {
+      const cls = roc.roc < -0.05 ? 'loss' : (roc.roc > 0.05 ? 'gain' : 'flat');
+      const sign = roc.roc > 0 ? '+' : '';
+      inline = `<div class="big" style="margin-top:6px">Trend: ${roc.trend.toFixed(1)} lbs <span class="roc-pill ${cls}">${sign}${roc.roc.toFixed(2)}% / wk</span></div>`;
+    }
+    weightHtml = '<div class="empty">No weight goal set yet.</div>' + inline;
+  }
+
+  // Helper: render a steps-target card body for a given habit-id + target
+  function stepsCardHtml(habitId, target) {
+    if (!target) {
+      return `<div class="empty">No target set.<br><small>Set in <a href="weekly-review.html" style="color:var(--gold);text-decoration:none;font-weight:700;">Weekly Review →</a></small></div>`;
+    }
+    // Compute date range based on what the user is currently viewing
+    let startD, endD;
+    if (viewMode === 'week') {
+      startD = startOfWeek(viewDate);
+      endD = addDays(startD, 6);
+    } else if (viewMode === 'month') {
+      const y = viewDate.getFullYear(), m = viewDate.getMonth();
+      startD = new Date(y, m, 1);
+      endD = new Date(y, m + 1, 0);
+    } else {
+      startD = new Date(viewDate.getFullYear(), 0, 1);
+      endD = todayDate;
+    }
+    const startStr = ymd(startD);
+    const endStr = ymd(endD < todayDate ? endD : todayDate);
+    let total = 0, daysLogged = 0;
+    for (const [d, day] of Object.entries(state.daily)) {
+      if (d < startStr || d > endStr) continue;
+      if (day[habitId]) { total += day[habitId]; daysLogged++; }
+    }
+    const avg = daysLogged ? Math.round(total / daysLogged) : 0;
+    const pct = Math.min(100, Math.round((avg / target) * 100));
+    const onPace = avg >= target
+      ? '✓ ' + fmtNum(avg - target) + ' above goal'
+      : fmtNum(target - avg) + ' below goal';
+    return `
+      <div class="big">${fmtNum(avg)} <span style="font-size:13px;color:var(--muted);font-weight:500">/ ${fmtNum(target)} steps/day</span></div>
+      <div class="sub">${daysLogged ? daysLogged + ' day' + (daysLogged===1?'':'s') + ' logged · ' + onPace : 'Log a day to start tracking'}</div>
+      <div class="mini-bar"><div class="fill" style="width:${pct}%"></div></div>
+    `;
+  }
+  const morningStepsHtml = stepsCardHtml('walk6k',  wkGoal.morning_steps);
+  const totalStepsHtml   = stepsCardHtml('walk12k', sg.daily);
+
+  // Daily calories (max)
+  const setInReviewLink = '<small>Set in <a href="weekly-review.html" style="color:var(--gold);text-decoration:none;font-weight:700;">Weekly Review →</a></small>';
+  let caloriesHtml;
+  if (wkGoal.calorie) {
+    caloriesHtml = `
+      <div class="big">≤ ${fmtNum(wkGoal.calorie)}<span style="font-size:13px;color:var(--muted);font-weight:500"> cal/day</span></div>
+      <div class="sub">Week of ${fmtRange(startOfWeek(viewDate))}</div>
+    `;
+  } else {
+    caloriesHtml = `<div class="empty">No daily calorie target set.<br>${setInReviewLink}</div>`;
+  }
+
+  // Daily protein (min)
+  let proteinHtml;
+  if (wkGoal.protein) {
+    proteinHtml = `
+      <div class="big">${fmtNum(wkGoal.protein)}<span style="font-size:13px;color:var(--muted);font-weight:500"> g/day</span></div>
+      <div class="sub">Week of ${fmtRange(startOfWeek(viewDate))}</div>
+    `;
+  } else {
+    proteinHtml = `<div class="empty">No daily protein target set.<br>${setInReviewLink}</div>`;
+  }
+
+  card.innerHTML = `
+    <div class="goals-section weight">
+      <button class="edit-btn" id="editGoals">Edit</button>
+      <h3>Weight Goal</h3>
+      ${weightHtml}
+    </div>
+    <div class="goals-section morning-steps">
+      <h3>Morning Steps</h3>
+      ${morningStepsHtml}
+    </div>
+    <div class="goals-section steps">
+      <h3>Total Steps</h3>
+      ${totalStepsHtml}
+    </div>
+    <div class="goals-section calories">
+      <h3>Daily Calories</h3>
+      ${caloriesHtml}
+    </div>
+    <div class="goals-section protein">
+      <h3>Daily Protein</h3>
+      ${proteinHtml}
+    </div>
+  `;
+
+  document.getElementById('editGoals').addEventListener('click', openGoalsModal);
+}
+
+// ---------- Modals ----------
+function openGoalsModal() {
+  const wg = state.goals.weight || {};
+  document.getElementById('gm-weight').value = wg.target || '';
+  document.getElementById('gm-weight-date').value = wg.targetDate || '';
+  document.getElementById('goalsModal').classList.add('show');
+}
+function closeGoalsModal() { document.getElementById('goalsModal').classList.remove('show'); }
+document.getElementById('gm-cancel').addEventListener('click', closeGoalsModal);
+document.getElementById('gm-save').addEventListener('click', () => {
+  const w = parseFloat(document.getElementById('gm-weight').value);
+  const d = document.getElementById('gm-weight-date').value;
+  state.goals.weight = (w > 0) ? { target: w, targetDate: d || null } : {};
+  state.goals.steps = (s > 0) ? { daily: s } : {};
+  save(); closeGoalsModal(); renderAll();
+});
+
+// Pull the latest weekly targets (steps / calories / protein) from the Weekly Review
+// page's Supabase row and inject them into local state so the habits page math works.
+// Also auto-check the "Weekly Review" habit for any week that has a saved review.
+async function loadWeeklyTargetsFromReview() {
+  try {
+    const { data: rows, error } = await sb
+      .from('weekly_reviews')
+      .select('week_ending, target_morning_steps, target_daily_steps, target_daily_calories, target_daily_protein')
+      .order('week_ending', { ascending: false });
+    if (error || !rows || rows.length === 0) return;
+
+    // Most-recent row sets the active targets
+    const latest = rows[0];
+    if (latest.target_daily_steps) {
+      state.goals = state.goals || {};
+      state.goals.steps = state.goals.steps || {};
+      state.goals.steps.daily = latest.target_daily_steps;
+    }
+    const wkStr = getISOWeek(todayDate);
+    if (latest.target_morning_steps || latest.target_daily_calories || latest.target_daily_protein) {
+      if (!state.weeklyGoals[wkStr]) state.weeklyGoals[wkStr] = {};
+      if (latest.target_morning_steps) state.weeklyGoals[wkStr].morning_steps = latest.target_morning_steps;
+      if (latest.target_daily_calories) state.weeklyGoals[wkStr].calorie = latest.target_daily_calories;
+      if (latest.target_daily_protein)  state.weeklyGoals[wkStr].protein = latest.target_daily_protein;
+    }
+
+    // For every saved review, mark that week's "Weekly Review" habit as done
+    rows.forEach(r => {
+      const sunday = new Date(r.week_ending + 'T00:00:00');
+      const wk = getISOWeek(sunday);
+      if (!state.weekly[wk]) state.weekly[wk] = {};
+      state.weekly[wk].weekly_review = true;
+    });
+
+    renderAll();
+  } catch (e) {
+    // weekly_reviews table may not exist yet — fail silently
+  }
+}
+
+function renderAll() {
+  renderHeader();
+  // Toggle tracker vs overview
+  const isOverview = viewMode === 'overview';
+  document.getElementById('trackerView').style.display = isOverview ? 'none' : 'block';
+  document.getElementById('overviewView').style.display = isOverview ? 'block' : 'none';
+  document.getElementById('todayPanel').style.display = isOverview ? 'none' : '';
+  document.getElementById('stats').style.display = isOverview ? 'none' : '';
+  document.getElementById('goalsCard').style.display = isOverview ? 'none' : '';
+  // Hide prev/next/today nav buttons in overview (no time-axis selection)
+  document.getElementById('prev').style.display = isOverview ? 'none' : '';
+  document.getElementById('next').style.display = isOverview ? 'none' : '';
+  document.getElementById('today-btn').style.display = isOverview ? 'none' : '';
+  document.getElementById('monthLabel').style.display = isOverview ? 'none' : '';
+
+  if (isOverview) {
+    renderOverview();
+    return;
+  }
+  renderGoals();
+  renderTodayPanel();
+  renderStats();
+  renderGrid('morningWrap', morningHabits, 'morning');
+  renderGrid('eveningWrap', eveningHabits, 'evening');
+  renderWeekly();
+  renderMeta();
+  renderMementoMori();
+}
+
+// ---------- Overview page ----------
+function renderOverview() {
+  const series = getTrendSeries();
+  const container = document.getElementById('overviewView');
+
+  let statsHtml = '', chartHtml = '', rocHtml = '';
+  if (series.length === 0) {
+    statsHtml = `<div class="chart-card"><h3>Weight Overview</h3>
+      <div class="empty-state">No weight entries yet.<br>Log a weight in Day or Month view to see your trend.</div>
+    </div>`;
+  } else {
+    const _ignored = renderWeightSection(series);
+    statsHtml = _ignored.statsHtml;
+    chartHtml = _ignored.chartHtml;
+    rocHtml = _ignored.rocHtml;
+  }
+
+  // Activity cards always render
+  const stepsCard = renderActivityCard({
+    title: 'Steps', habitId: 'walk12k', unit: 'steps', invert: false,
+    target: state.goals.steps?.daily || null,
+  });
+  const caloriesCard = renderActivityCard({
+    title: 'Calories', habitId: 'calorie_goal', unit: 'cal', invert: true,
+    target: latestWeeklyTarget('calorie'),
+  });
+  const proteinCard = renderActivityCard({
+    title: 'Protein', habitId: 'protein_goal', unit: 'g', invert: false,
+    target: latestWeeklyTarget('protein'),
+  });
+
+  container.innerHTML = statsHtml + chartHtml + rocHtml + stepsCard + caloriesCard + proteinCard;
+}
+
+function renderWeightSection(series) {
+  const last = series[series.length - 1];
+  const first = series[0];
+  const totalChange = last.trend - first.trend;
+  const lossClass = totalChange < 0 ? '' : (totalChange > 0 ? 'gain' : 'flat');
+  const sign = totalChange > 0 ? '+' : '';
+  const rocCls = (last.roc != null && last.roc < -0.05) ? '' : ((last.roc != null && last.roc > 0.05) ? 'gain' : 'flat');
+  const rocStr = last.roc != null ? (last.roc > 0 ? '+' : '') + last.roc.toFixed(2) + '%' : '—';
+
+  // Compute weekly summaries (avg trend per ISO week)
+  const weeklyGroups = {};
+  for (const e of series) {
+    const wk = getISOWeek(new Date(e.date + 'T00:00:00'));
+    if (!weeklyGroups[wk]) weeklyGroups[wk] = [];
+    weeklyGroups[wk].push(e.trend);
+  }
+  const weeklyTrend = Object.keys(weeklyGroups).sort().map(wk => ({
+    wk, avg: weeklyGroups[wk].reduce((a,b)=>a+b,0) / weeklyGroups[wk].length
+  }));
+
+  // Stats
+  let statsHtml = `<div class="overview-stats">
+    <div class="overview-stat">
+      <div class="label">Current Trend</div>
+      <div class="value">${last.trend.toFixed(1)} <span style="font-size:13px;color:var(--muted);font-weight:500">lbs</span></div>
+      <div class="sub">${series.length} weigh-in${series.length===1?'':'s'} · raw ${last.weight.toFixed(1)} lbs</div>
+    </div>
+    <div class="overview-stat ${rocCls}">
+      <div class="label">Latest ROC (week)</div>
+      <div class="value">${rocStr}</div>
+      <div class="sub">${last.lbsChange != null ? (last.lbsChange > 0 ? '+' : '') + last.lbsChange.toFixed(2) + ' lbs vs 7d ago' : 'Need 7+ days of data'}</div>
+    </div>
+    <div class="overview-stat ${lossClass}">
+      <div class="label">Total Change</div>
+      <div class="value">${sign}${totalChange.toFixed(1)} <span style="font-size:13px;color:var(--muted);font-weight:500">lbs</span></div>
+      <div class="sub">since ${fmtDate(first.date)}</div>
+    </div>
+  </div>`;
+
+  // Weight trend chart
+  const w = 800, h = 280, pad = { l: 50, r: 16, t: 16, b: 30 };
+  const innerW = w - pad.l - pad.r, innerH = h - pad.t - pad.b;
+  const dates = series.map(e => new Date(e.date + 'T00:00:00').getTime());
+  const minT = Math.min(...dates), maxT = Math.max(...dates);
+  const allWeights = series.flatMap(e => [e.weight, e.trend]);
+  let minW = Math.min(...allWeights), maxW = Math.max(...allWeights);
+  const margin = (maxW - minW) * 0.15 || 1;
+  minW -= margin; maxW += margin;
+  const xScale = t => pad.l + ((t - minT) / Math.max(1, maxT - minT)) * innerW;
+  const yScale = wt => pad.t + (1 - (wt - minW) / (maxW - minW)) * innerH;
+
+  // Y-axis ticks
+  const ticks = 5;
+  let axisY = '';
+  for (let i = 0; i <= ticks; i++) {
+    const v = minW + (i / ticks) * (maxW - minW);
+    const y = yScale(v);
+    axisY += `<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="#eee5d3" stroke-width="1"/>`;
+    axisY += `<text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#999">${v.toFixed(1)}</text>`;
+  }
+
+  // X-axis labels (3 evenly spaced)
+  let axisX = '';
+  for (let i = 0; i < 3; i++) {
+    const t = minT + (i / 2) * (maxT - minT);
+    const x = xScale(t);
+    const dt = new Date(t);
+    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    axisX += `<text x="${x}" y="${h - 8}" text-anchor="middle" font-size="10" fill="#999">${m[dt.getMonth()]} ${dt.getDate()}</text>`;
+  }
+
+  // Lines
+  const rawPath = series.map((e, i) => {
+    const x = xScale(new Date(e.date + 'T00:00:00').getTime());
+    const y = yScale(e.weight);
+    return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(' ');
+  const trendPath = series.map((e, i) => {
+    const x = xScale(new Date(e.date + 'T00:00:00').getTime());
+    const y = yScale(e.trend);
+    return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(' ');
+  // Goal line (if set)
+  let goalLine = '';
+  const wg = state.goals.weight || {};
+  if (wg.target && wg.target >= minW && wg.target <= maxW) {
+    const gy = yScale(wg.target);
+    goalLine = `<line x1="${pad.l}" y1="${gy}" x2="${w-pad.r}" y2="${gy}" stroke="${'#c89a3a'}" stroke-width="1.5" stroke-dasharray="4 4"/>
+                <text x="${w-pad.r}" y="${gy-4}" text-anchor="end" font-size="10" font-weight="700" fill="#c89a3a">Goal ${wg.target}</text>`;
+  }
+  // Dots for raw weights
+  const dots = series.map(e => {
+    const x = xScale(new Date(e.date + 'T00:00:00').getTime());
+    const y = yScale(e.weight);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#c89a3a" opacity="0.6"/>`;
+  }).join('');
+
+  const chartHtml = `
+    <div class="chart-card">
+      <h3>Weight Trend</h3>
+      <div class="ch-sub">Raw daily weight (gold dots) and smoothed trend (Hacker's Diet, α=0.1)</div>
+      <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+        ${axisY}
+        ${goalLine}
+        <path d="${rawPath}" fill="none" stroke="#c89a3a" stroke-width="1" opacity="0.4"/>
+        <path d="${trendPath}" fill="none" stroke="#1f5f5f" stroke-width="2.5" stroke-linejoin="round"/>
+        ${dots}
+        ${axisX}
+      </svg>
+      <div class="legend">
+        <span><span class="dot" style="background:#c89a3a;opacity:0.6"></span>Raw weight</span>
+        <span><span class="dot" style="background:#1f5f5f"></span>Trend (smoothed)</span>
+        ${wg.target ? '<span><span class="dot" style="background:#c89a3a"></span>Goal</span>' : ''}
+      </div>
+    </div>
+  `;
+
+  // ROC over time chart
+  const rocSeries = series.filter(e => e.roc != null);
+  let rocHtml = '';
+  if (rocSeries.length > 1) {
+    const rocVals = rocSeries.map(e => e.roc);
+    let minR = Math.min(...rocVals, -0.5), maxR = Math.max(...rocVals, 0.5);
+    const rMargin = (maxR - minR) * 0.2 || 0.5;
+    minR -= rMargin; maxR += rMargin;
+    const rocXScale = t => pad.l + ((t - minT) / Math.max(1, maxT - minT)) * innerW;
+    const rocYScale = v => pad.t + (1 - (v - minR) / (maxR - minR)) * innerH;
+    const zeroY = rocYScale(0);
+    let rocAxisY = '';
+    for (let i = 0; i <= 4; i++) {
+      const v = minR + (i / 4) * (maxR - minR);
+      const y = rocYScale(v);
+      rocAxisY += `<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="#eee5d3" stroke-width="1"/>`;
+      rocAxisY += `<text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#999">${v.toFixed(2)}%</text>`;
+    }
+    const rocPath = rocSeries.map((e, i) => {
+      const x = rocXScale(new Date(e.date + 'T00:00:00').getTime());
+      const y = rocYScale(e.roc);
+      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(' ');
+    rocHtml = `
+      <div class="chart-card">
+        <h3>Rate of Change</h3>
+        <div class="ch-sub">Weekly trend % change · negative = losing, positive = gaining</div>
+        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+          ${rocAxisY}
+          <line x1="${pad.l}" y1="${zeroY}" x2="${w-pad.r}" y2="${zeroY}" stroke="#999" stroke-width="1.2" stroke-dasharray="3 3"/>
+          <path d="${rocPath}" fill="none" stroke="#7a2030" stroke-width="2.5" stroke-linejoin="round"/>
+          ${axisX}
+        </svg>
+      </div>
+    `;
+  }
+
+  return { statsHtml, chartHtml, rocHtml };
+}
+
+// Returns the most recently set weekly target for a given key
+function latestWeeklyTarget(key) {
+  const weeks = Object.keys(state.weeklyGoals).sort();
+  for (let i = weeks.length - 1; i >= 0; i--) {
+    const v = state.weeklyGoals[weeks[i]][key];
+    if (v) return v;
+  }
+  return null;
+}
+
+// Apple-Watch-style activity card with weekly + yearly bars + YTD avg
+function renderActivityCard({ title, habitId, unit, target, invert }) {
+  // Pull all entries for this habit
+  const entries = []; // {date: Date, val: number}
+  for (const [d, day] of Object.entries(state.daily)) {
+    const v = day[habitId];
+    if (typeof v === 'number' && v > 0) {
+      entries.push({ date: new Date(d + 'T00:00:00'), dateStr: d, val: v });
+    }
+  }
+  entries.sort((a,b) => a.dateStr.localeCompare(b.dateStr));
+
+  // ---- Weekly bars: current ISO week (Mon-Sun) ----
+  const weekStart = startOfWeek(todayDate);
+  const weekDays = Array.from({length:7}, (_,i) => addDays(weekStart, i));
+  const weekVals = weekDays.map(d => {
+    const ds = ymd(d);
+    const e = entries.find(x => x.dateStr === ds);
+    return e ? e.val : 0;
+  });
+  const weekDayLabels = ['M','T','W','T','F','S','S'];
+
+  // ---- Yearly bars: monthly average for current year ----
+  const year = todayDate.getFullYear();
+  const monthsArr = Array.from({length:12}, () => ({ sum: 0, count: 0 }));
+  for (const e of entries) {
+    if (e.date.getFullYear() === year) {
+      monthsArr[e.date.getMonth()].sum += e.val;
+      monthsArr[e.date.getMonth()].count++;
+    }
+  }
+  const monthVals = monthsArr.map(m => m.count ? m.sum / m.count : 0);
+  const monthLabels = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+
+  // ---- Stats ----
+  const yearEntries = entries.filter(e => e.date.getFullYear() === year);
+  const ytdAvg = yearEntries.length ? Math.round(yearEntries.reduce((a,b)=>a+b.val,0) / yearEntries.length) : 0;
+  const weekLogged = weekVals.filter(v => v > 0);
+  const weekAvg = weekLogged.length ? Math.round(weekLogged.reduce((a,b)=>a+b,0) / weekLogged.length) : 0;
+  const monthIdx = todayDate.getMonth();
+  const monthAvg = monthsArr[monthIdx].count ? Math.round(monthsArr[monthIdx].sum / monthsArr[monthIdx].count) : 0;
+
+  // ---- Determine "hit" coloring ----
+  function isHit(v) {
+    if (!target || v === 0) return false;
+    return invert ? v <= target : v >= target;
+  }
+  function isOver(v) { return invert && target && v > target; } // bad direction (calories)
+
+  // ---- Render bars ----
+  function renderBars(vals, labels, todayIdx) {
+    const max = Math.max(...vals, target || 0, 1) * 1.1;
+    let barsHtml = '';
+    for (let i = 0; i < vals.length; i++) {
+      const v = vals[i];
+      const h = max > 0 ? (v / max) * 100 : 0;
+      const cls = v === 0 ? 'zero' : (isOver(v) ? 'over' : (isHit(v) ? 'hit' : ''));
+      const todayCls = (todayIdx != null && i === todayIdx) ? 'today' : '';
+      barsHtml += `<div class="bar ${cls} ${todayCls}" style="height:${Math.max(h, v>0?6:0)}%"></div>`;
+    }
+    let targetLine = '';
+    if (target) {
+      const ty = 100 - (target / max) * 100;
+      targetLine = `<div class="target-line" style="top:${ty}%"></div>`;
+    }
+    let labelsHtml = '<div class="bar-labels">';
+    for (let i = 0; i < labels.length; i++) {
+      const todayCls = (todayIdx != null && i === todayIdx) ? 'today' : '';
+      labelsHtml += `<div class="bl ${todayCls}">${labels[i]}</div>`;
+    }
+    labelsHtml += '</div>';
+    return `<div class="bars">${targetLine}${barsHtml}</div>${labelsHtml}`;
+  }
+
+  const todayWeekIdx = (todayDate.getDay() + 6) % 7;
+  const targetSuffix = target ? ` · target ${invert?'≤':'≥'} ${fmtNum(target)}` : '';
+
+  return `
+    <div class="activity-card">
+      <div class="ac-head">
+        <div>
+          <h3>${title}</h3>
+          <div class="ch-sub">Daily average over time${targetSuffix}</div>
+        </div>
+        <div class="ac-stats">
+          <div class="ac-stat"><div class="v">${fmtNum(weekAvg)}</div><div class="l">This Week</div></div>
+          <div class="ac-stat"><div class="v">${fmtNum(monthAvg)}</div><div class="l">This Month</div></div>
+          <div class="ac-stat"><div class="v">${fmtNum(ytdAvg)}</div><div class="l">YTD Avg</div></div>
+        </div>
+      </div>
+      <div class="ac-charts">
+        <div class="ac-chart">
+          <div class="ac-title">This Week (Mon–Sun)</div>
+          ${renderBars(weekVals, weekDayLabels, todayWeekIdx)}
+        </div>
+        <div class="ac-chart">
+          <div class="ac-title">${year} · Monthly Average</div>
+          ${renderBars(monthVals, monthLabels, monthIdx)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ---------- Nav ----------
+function step(direction) {
+  if (viewMode === 'month') {
+    viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + direction, 1);
+  } else if (viewMode === 'week') {
+    viewDate = addDays(viewDate, 7 * direction);
+  } else {
+    viewDate = addDays(viewDate, direction);
+  }
+  renderAll();
+}
+document.getElementById('prev').addEventListener('click', () => step(-1));
+document.getElementById('next').addEventListener('click', () => step(1));
+document.getElementById('today-btn').addEventListener('click', () => {
+  viewDate = new Date();
+  renderAll();
+});
+
+// View tabs
+function setViewMode(mode) {
+  viewMode = mode;
+  localStorage.setItem('viewMode', mode);
+  document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === mode));
+  // Hide section meta in day view (it's not meaningful for one day)
+  renderAll();
+}
+document.querySelectorAll('.view-tab').forEach(b => {
+  b.addEventListener('click', () => setViewMode(b.dataset.view));
+});
+// Apply saved view on load
+document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === viewMode));
+
+// ---------- Auth flow ----------
+const authOverlay = document.getElementById('authOverlay');
+const authForm = document.getElementById('authForm');
+const authEmail = document.getElementById('authEmail');
+const authSubmit = document.getElementById('authSubmit');
+const authStatus = document.getElementById('authStatus');
+
+function showAuth() { authOverlay.classList.add('show'); }
+function hideAuth() { authOverlay.classList.remove('show'); }
+function setAuthStatus(msg, type) {
+  authStatus.textContent = msg;
+  authStatus.className = 'auth-status show ' + (type || 'info');
+}
+
+authForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = authEmail.value.trim();
+  if (!email) return;
+  authSubmit.disabled = true;
+  authSubmit.textContent = 'Sending...';
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin + window.location.pathname }
+  });
+  authSubmit.disabled = false;
+  authSubmit.textContent = 'Send magic link';
+  if (error) setAuthStatus(error.message, 'error');
+  else setAuthStatus('Check your email — link sent to ' + email, 'info');
+});
+
+// ---- Demo mode toggle ----
+// Flip to true to re-enable login + cloud sync.
+// false = anyone can open the site and use it with local-only storage (good for showing friends).
+const AUTH_ENABLED = true;
+
+if (AUTH_ENABLED) {
+  // React to sign-in / sign-out events (including magic-link return)
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (session && session.user) {
+      const wasLoggedOut = !currentUser;
+      currentUser = session.user;
+      hideAuth();
+      if (wasLoggedOut) {
+        await pullStateFromCloud();
+        renderAll();
+        loadWeeklyTargetsFromReview();
+        fetchHealthSync();
+      }
+    } else {
+      currentUser = null;
+      showAuth();
+    }
+  });
+
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && session.user) {
+      // Guard: if onAuthStateChange already initialized us, don't re-pull
+      // (the redundant pull would overwrite fetchHealthSync's prefill).
+      if (currentUser) return;
+      currentUser = session.user;
+      await pullStateFromCloud();
+      renderAll();
+      loadWeeklyTargetsFromReview();
+      fetchHealthSync();
+    } else {
+      showAuth();
+      renderAll();
+    }
+  })();
+} else {
+  // Demo / local-only mode — no login, no cloud. Each visitor gets their own empty tracker.
+  renderAll();
+  loadWeeklyTargetsFromReview();
+  fetchHealthSync();
+}
+
+// ---------- Apple Health auto-sync ----------
+// Reads today's row from health_syncs table (written by your iOS Shortcut).
+// Pre-fills steps/protein/calories in the tracker if you haven't manually set them today.
+// If you've already typed a value, your number wins — no overwrite.
+const HEALTH_SYNC_MAP = {
+  morning_steps: 'walk6k',
+  steps:         'walk12k',
+  protein:       'protein_goal',
+  calories:      'calorie_goal',
+};
+
+async function fetchHealthSync() {
+  const today = ymd(new Date());
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/health_syncs?date=eq.${today}&select=*`,
+      { headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' } }
+    );
+    const rows = await res.json();
+    if (!rows || !rows.length) return;
+    const h = rows[0];
+    renderHealthCard(h, today);
+    prefillFromHealth(h, today);
+  } catch (e) {
+    console.warn('Health sync fetch failed:', e);
+  }
+}
+
+function renderHealthCard(h, today) {
+  const card = document.getElementById('healthCard');
+  const metrics = document.getElementById('healthMetrics');
+  const day = getDay(today);
+  const items = [
+    { key: 'morning_steps', label: 'Morning Steps', val: h.morning_steps, unit: 'steps', habitId: null },
+    { key: 'steps',    label: 'Total Steps', val: h.steps,    unit: 'steps',   habitId: 'walk12k'      },
+    { key: 'calories', label: 'Calories', val: h.calories, unit: 'cal',     habitId: 'calorie_goal' },
+    { key: 'protein',  label: 'Protein',  val: h.protein,  unit: 'g',       habitId: 'protein_goal' },
+    { key: 'carbs',    label: 'Carbs',    val: h.carbs,    unit: 'g',       habitId: null           },
+    { key: 'fat',      label: 'Fat',      val: h.fat,      unit: 'g',       habitId: null           },
+  ].filter(m => m.val != null);
+
+  if (!items.length) return;
+  const syncTime = h.synced_at ? new Date(h.synced_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+  document.getElementById('healthBadge').textContent = syncTime ? `synced ${syncTime}` : 'synced';
+
+  metrics.innerHTML = items.map(m => {
+    const overridden = m.habitId && day[m.habitId] != null && day[m.habitId] != Math.round(m.val);
+    return `<div class="health-metric">
+      <div class="val">${fmtNum(Math.round(m.val))}</div>
+      <div class="unit">${m.unit === 'steps' ? m.label : m.label + ' (' + m.unit + ')'}</div>
+      ${overridden ? '<div class="override-note">overridden</div>' : ''}
+    </div>`;
+  }).join('');
+  card.classList.add('show');
+}
+
+function prefillFromHealth(h, today) {
+  const day = getDay(today);
+  let changed = false;
+  for (const [healthKey, habitId] of Object.entries(HEALTH_SYNC_MAP)) {
+    const val = h[healthKey];
+    if (val == null) continue;
+    setDailyHabit(today, habitId, Math.round(val));
+    changed = true;
+  }
+  if (changed) { save(); renderAll(); }
+}
+
+// fetchHealthSync is called from the auth flow above (after pullStateFromCloud
+// completes), to avoid prefill racing with the initial cloud pull.
+
+// ---------- Memento Mori ----------
+function renderMementoMori() {
+  const el = document.getElementById('mementoSection');
+  if (!el) return;
+  const birthday = state.profile?.birthday;
+
+  if (!birthday) {
+    el.innerHTML = `
+      <div class="section" style="margin-bottom:16px">
+        <div class="section-head memento-head">Memento Mori · Life in Weeks</div>
+        <div class="mm-setup">
+          <p>Each square is one week of a 90-year life. Enter your birthday to see how many you've lived — and how many remain.</p>
+          <div class="mm-setup-row">
+            <input type="date" id="mm-bday-input" max="${new Date().toISOString().slice(0,10)}" />
+            <button class="mm-save-btn" onclick="saveBirthday()">Set Birthday</button>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const birth = new Date(birthday + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+  const weeksLived = Math.floor((today - birth) / MS_PER_WEEK);
+  const YEARS = 70, WPY = 52, TOTAL = YEARS * WPY;
+  const UNIT = 7; // cell 6px + gap 1px
+
+  const ageYears = Math.floor((today - birth) / (365.25 * 24 * 60 * 60 * 1000));
+  const weeksLeft = Math.max(0, TOTAL - weeksLived);
+
+  let cells = '';
+  for (let i = 0; i < TOTAL; i++) {
+    if (i < weeksLived) cells += '<span class="mm-cell lived"></span>';
+    else if (i === weeksLived) cells += '<span class="mm-cell current"></span>';
+    else cells += '<span class="mm-cell"></span>';
+  }
+
+  let labels = '';
+  for (let y = 0; y <= YEARS; y += 5) {
+    labels += `<div class="mm-label" style="top:${y * UNIT}px">${y}</div>`;
+  }
+
+  el.innerHTML = `
+    <div class="section" style="margin-bottom:16px">
+      <div class="section-head memento-head">
+        Memento Mori · Life in Weeks
+        <span class="mm-head-meta">Age ${ageYears} &nbsp;·&nbsp; ${weeksLived.toLocaleString()} weeks lived &nbsp;·&nbsp; ${weeksLeft.toLocaleString()} remaining</span>
+      </div>
+      <div class="mm-body">
+        <div class="mm-chart-row">
+          <div class="mm-grid-wrap">
+            <div class="mm-grid">${cells}</div>
+          </div>
+          <div class="mm-labels-col" style="height:${YEARS * UNIT}px">${labels}</div>
+        </div>
+        <div class="mm-legend">
+          <span class="mm-legend-cell lived"></span> Weeks lived &nbsp;&nbsp;
+          <span class="mm-legend-cell current"></span> This week &nbsp;&nbsp;
+          <span class="mm-legend-cell"></span> Weeks ahead
+        </div>
+        <div class="mm-edit">
+          <button class="mm-change-btn" onclick="clearBirthday()">Change birthday</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function saveBirthday() {
+  const input = document.getElementById('mm-bday-input');
+  if (!input || !input.value) return;
+  if (!state.profile) state.profile = {};
+  state.profile.birthday = input.value;
+  save();
+  renderMementoMori();
+}
+
+function clearBirthday() {
+  if (state.profile) delete state.profile.birthday;
+  save();
+  renderMementoMori();
+}
+</script>
+</body>
+</html>
