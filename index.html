@@ -2243,7 +2243,7 @@ if (AUTH_ENABLED) {
       currentUser = session.user;
       hideAuth();
       if (wasLoggedOut) {
-        await pullStateFromCloud();
+        try { await pullStateFromCloud(); } catch(e) { console.error('Cloud pull error:', e); }
         renderAll();
         loadWeeklyTargetsFromReview();
         fetchHealthSync();
@@ -2261,7 +2261,7 @@ if (AUTH_ENABLED) {
       // (the redundant pull would overwrite fetchHealthSync's prefill).
       if (currentUser) return;
       currentUser = session.user;
-      await pullStateFromCloud();
+      try { await pullStateFromCloud(); } catch(e) { console.error('Cloud pull error:', e); }
       renderAll();
       loadWeeklyTargetsFromReview();
       fetchHealthSync();
