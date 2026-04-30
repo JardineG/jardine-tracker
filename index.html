@@ -527,12 +527,15 @@
 
 <div class="wrap">
 
-  <nav class="top-nav">
-    <a href="index.html" class="active">Daily Habits</a>
-    <a href="weekly-review.html">Weekly Review</a>
-    <a href="books.html">Books</a>
-    <a href="movies.html">Movies</a>
-    <a href="places.html">Places</a>
+  <nav class="top-nav" style="justify-content: space-between; align-items: center;">
+    <div style="display:flex; gap:4px;">
+      <a href="index.html" class="active">Daily Habits</a>
+      <a href="weekly-review.html">Weekly Review</a>
+      <a href="books.html">Books</a>
+      <a href="movies.html">Movies</a>
+      <a href="places.html">Places</a>
+    </div>
+    <button class="auth-signout" onclick="signOut()" id="signOutBtn" style="display:none; margin-bottom:1px;">Sign Out</button>
   </nav>
 
   <div class="header">
@@ -555,6 +558,9 @@
       <button id="today-btn">Today</button>
     </div>
   </div>
+
+  <!-- Memento Mori (top of page) -->
+  <div id="mementoSection" style="margin-bottom:16px"></div>
 
   <!-- Goals card -->
   <div class="goals-card" id="goalsCard"></div>
@@ -597,9 +603,6 @@
     <div class="section-head">Weekly <span class="meta" id="weeklyMeta"></span></div>
     <div class="weekly-grid" id="weeklyGrid"></div>
   </div>
-
-  <!-- Memento Mori -->
-  <div id="mementoSection"></div>
 
   </div><!-- /trackerView -->
 
@@ -2207,8 +2210,21 @@ const authEmail = document.getElementById('authEmail');
 const authSubmit = document.getElementById('authSubmit');
 const authStatus = document.getElementById('authStatus');
 
-function showAuth() { authOverlay.classList.add('show'); }
-function hideAuth() { authOverlay.classList.remove('show'); }
+function showAuth() {
+  authOverlay.classList.add('show');
+  const btn = document.getElementById('signOutBtn');
+  if (btn) btn.style.display = 'none';
+}
+function hideAuth() {
+  authOverlay.classList.remove('show');
+  const btn = document.getElementById('signOutBtn');
+  if (btn) btn.style.display = '';
+}
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  showAuth();
+}
 function setAuthStatus(msg, type) {
   authStatus.textContent = msg;
   authStatus.className = 'auth-status show ' + (type || 'info');
@@ -2395,7 +2411,7 @@ function renderMementoMori() {
   el.innerHTML = `
     <div class="section" style="margin-bottom:16px">
       <div class="section-head memento-head">
-        Memento Mori · Life in Weeks
+        Memento Mori
         <span class="mm-head-meta">Age ${ageYears} &nbsp;·&nbsp; ${weeksLived.toLocaleString()} weeks lived &nbsp;·&nbsp; ${weeksLeft.toLocaleString()} remaining</span>
       </div>
       <div class="mm-body">
