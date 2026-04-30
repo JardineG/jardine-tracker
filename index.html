@@ -490,10 +490,10 @@
     padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit;
   }
   .mm-save-btn:hover { opacity: 0.8; }
-  .mm-chart-row { display: flex; gap: 10px; align-items: flex-start; overflow-x: auto; padding-bottom: 4px; }
+  .mm-chart-row { display: flex; gap: 8px; align-items: flex-start; }
   .mm-grid-wrap { flex-shrink: 0; }
-  .mm-grid { display: grid; grid-template-columns: repeat(52, 6px); gap: 1px; }
-  .mm-cell { width: 6px; height: 6px; border-radius: 1px; background: var(--line); }
+  .mm-grid { display: grid; grid-template-columns: repeat(52, 4px); gap: 1px; }
+  .mm-cell { width: 4px; height: 4px; border-radius: 1px; background: var(--line); }
   .mm-cell.lived { background: var(--ink); }
   .mm-cell.current { background: var(--gold); box-shadow: 0 0 3px var(--gold); }
   .mm-labels-col { position: relative; flex-shrink: 0; width: 28px; }
@@ -2412,7 +2412,7 @@ function renderMementoMori() {
   const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
   const weeksLived = Math.floor((today - birth) / MS_PER_WEEK);
   const YEARS = 70, WPY = 52, TOTAL = YEARS * WPY;
-  const UNIT = 7; // cell 6px + gap 1px
+  const UNIT = 5; // cell 4px + gap 1px
 
   const ageYears = Math.floor((today - birth) / (365.25 * 24 * 60 * 60 * 1000));
   const weeksLeft = Math.max(0, TOTAL - weeksLived);
