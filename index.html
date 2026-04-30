@@ -508,6 +508,23 @@
     padding: 4px 10px; cursor: pointer; font-size: 11px; color: var(--muted); font-family: inherit;
   }
   .mm-change-btn:hover { background: var(--bg); color: var(--ink); }
+
+  /* Top 2-column layout */
+  .top-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: start;
+  }
+  .top-right-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .top-right-col .goals-card,
+  .top-right-col .today-panel,
+  .top-right-col .health-card,
+  .top-right-col .stats { margin-bottom: 0; }
+  @media (max-width: 960px) {
+    .top-layout { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -559,26 +576,30 @@
     </div>
   </div>
 
-  <!-- Memento Mori (top of page) -->
-  <div id="mementoSection" style="margin-bottom:16px"></div>
+  <!-- 2-column top layout: Memento Mori left, dashboard right -->
+  <div class="top-layout">
+    <div id="mementoSection"></div>
 
-  <!-- Goals card -->
-  <div class="goals-card" id="goalsCard"></div>
+    <div class="top-right-col">
+      <!-- Goals card -->
+      <div class="goals-card" id="goalsCard"></div>
 
-  <!-- Today focus panel -->
-  <div class="today-panel" id="todayPanel"></div>
+      <!-- Today focus panel -->
+      <div class="today-panel" id="todayPanel"></div>
 
-  <!-- Health sync card -->
-  <div class="health-card" id="healthCard">
-    <div class="health-card-head">
-      <span class="label">Apple Health · synced automatically</span>
-      <span class="badge" id="healthBadge">synced</span>
+      <!-- Health sync card -->
+      <div class="health-card" id="healthCard">
+        <div class="health-card-head">
+          <span class="label">Apple Health · synced automatically</span>
+          <span class="badge" id="healthBadge">synced</span>
+        </div>
+        <div class="health-metrics" id="healthMetrics"></div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="stats" id="stats"></div>
     </div>
-    <div class="health-metrics" id="healthMetrics"></div>
   </div>
-
-  <!-- Stats strip -->
-  <div class="stats" id="stats"></div>
 
   <!-- Overview view (hidden unless overview mode) -->
   <div id="overviewView" style="display:none"></div>
@@ -2409,7 +2430,7 @@ function renderMementoMori() {
   }
 
   el.innerHTML = `
-    <div class="section" style="margin-bottom:16px">
+    <div class="section">
       <div class="section-head memento-head">
         Memento Mori
         <span class="mm-head-meta">Age ${ageYears} &nbsp;·&nbsp; ${weeksLived.toLocaleString()} weeks lived &nbsp;·&nbsp; ${weeksLeft.toLocaleString()} remaining</span>
