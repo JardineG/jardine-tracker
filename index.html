@@ -2273,20 +2273,27 @@ authForm.addEventListener('submit', async (e) => {
 const AUTH_ENABLED = true;
 
 if (AUTH_ENABLED) {
-  // React to sign-in / sign-out events (including magic-link return)
+  // Single init function — runs exactly once per session (flag prevents double-fire).
+  // Both onAuthStateChange and getSession() call this; whichever fires first wins.
+  let appInitDone = false;
+  async function initApp(user) {
+    if (appInitDone) return;
+    appInitDone = true;
+    currentUser = user;
+    hideAuth();
+    try { await pullStateFromCloud(); } catch(e) { console.error('Cloud pull error:', e); }
+    renderAll();
+    loadWeeklyTargetsFromReview();
+    fetchHealthSync();
+  }
+
   sb.auth.onAuthStateChange(async (event, session) => {
     if (session && session.user) {
-      const wasLoggedOut = !currentUser;
-      currentUser = session.user;
-      hideAuth();
-      if (wasLoggedOut) {
-        try { await pullStateFromCloud(); } catch(e) { console.error('Cloud pull error:', e); }
-        renderAll();
-        loadWeeklyTargetsFromReview();
-        fetchHealthSync();
-      }
+      initApp(session.user);
     } else {
+      // Signed out
       currentUser = null;
+      appInitDone = false;
       showAuth();
     }
   });
@@ -2294,14 +2301,7 @@ if (AUTH_ENABLED) {
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
     if (session && session.user) {
-      // Guard: if onAuthStateChange already initialized us, don't re-pull
-      // (the redundant pull would overwrite fetchHealthSync's prefill).
-      if (currentUser) return;
-      currentUser = session.user;
-      try { await pullStateFromCloud(); } catch(e) { console.error('Cloud pull error:', e); }
-      renderAll();
-      loadWeeklyTargetsFromReview();
-      fetchHealthSync();
+      initApp(session.user);
     } else {
       showAuth();
       renderAll();
