@@ -487,6 +487,57 @@
   @media (max-width: 960px) {
     .top-layout { grid-template-columns: 1fr; }
   }
+  /* Daily Goals */
+  .daily-goals-section {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .daily-goals-head {
+    background: var(--gold); color: #fff; padding: 10px 16px;
+    font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .daily-goals-head .dg-date { font-weight: 500; opacity: 0.85; font-size: 11px; letter-spacing: 1px; }
+  .daily-goals-body { padding: 12px 16px; }
+  .dg-add-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .dg-input {
+    flex: 1; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: var(--bg);
+  }
+  .dg-input:focus { outline: none; border-color: var(--gold); }
+  .dg-input::placeholder { color: var(--muted); }
+  .dg-add-btn {
+    padding: 9px 16px; background: var(--gold); color: #fff; border: 0;
+    border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;
+    font-family: inherit; white-space: nowrap;
+  }
+  .dg-add-btn:hover { opacity: 0.88; }
+  .dg-list { display: flex; flex-direction: column; gap: 6px; }
+  .dg-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+    transition: background 0.1s;
+  }
+  .dg-item.done { background: var(--teal-soft); border-color: var(--teal); }
+  .dg-check {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line);
+    background: #fff; cursor: pointer; flex-shrink: 0; display: flex;
+    align-items: center; justify-content: center; font-size: 13px;
+    transition: all 0.12s;
+  }
+  .dg-item.done .dg-check { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .dg-text { flex: 1; font-size: 14px; line-height: 1.3; }
+  .dg-item.done .dg-text { text-decoration: line-through; color: var(--muted); }
+  .dg-del {
+    background: transparent; border: 0; color: var(--muted); cursor: pointer;
+    font-size: 16px; padding: 2px 4px; border-radius: 4px; opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .dg-item:hover .dg-del { opacity: 1; }
+  .dg-del:hover { background: var(--red-soft); color: var(--red); }
+  .dg-empty { font-size: 13px; color: var(--muted); font-style: italic; padding: 4px 0; }
+  .dg-progress { font-size: 11px; color: var(--muted); margin-top: 8px; letter-spacing: 0.5px; }
+
   /* Dashboard (Overview tab) */
   .dash-toolbar {
     display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
@@ -607,6 +658,9 @@
     <div class="section-head">Morning · Update before 8 AM <span class="meta" id="morningMeta"></span></div>
     <div class="grid-wrap" id="morningWrap"></div>
   </div>
+
+  <!-- Daily Goals -->
+  <div id="dailyGoalsSection"></div>
 
   <!-- Evening -->
   <div class="section evening">
@@ -1891,6 +1945,7 @@ function renderAll() {
   renderTodayPanel();
   renderStats();
   renderGrid('morningWrap', morningHabits, 'morning');
+  renderDailyGoals();
   renderGrid('eveningWrap', eveningHabits, 'evening');
   renderWeekly();
   renderMeta();
@@ -2429,6 +2484,102 @@ function prefillFromHealth(h, today) {
     }
   }
   if (changed) { save(); renderAll(); }
+}
+
+// ---------- Daily Goals ----------
+function getDailyGoals(dateStr) {
+  return (state.daily[dateStr] && state.daily[dateStr]._goals) ? state.daily[dateStr]._goals : [];
+}
+
+function saveDailyGoals(dateStr, goals) {
+  if (!state.daily[dateStr]) state.daily[dateStr] = {};
+  if (goals.length === 0) {
+    delete state.daily[dateStr]._goals;
+    if (Object.keys(state.daily[dateStr]).length === 0) delete state.daily[dateStr];
+  } else {
+    state.daily[dateStr]._goals = goals;
+  }
+  save();
+}
+
+function renderDailyGoals() {
+  const el = document.getElementById('dailyGoalsSection');
+  if (!el) return;
+  // Only show in day view
+  if (viewMode !== 'day') { el.innerHTML = ''; return; }
+
+  const dateStr = ymd(viewDate);
+  const goals = getDailyGoals(dateStr);
+  const done = goals.filter(g => g.done).length;
+  const total = goals.length;
+
+  const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dt = new Date(dateStr + 'T00:00:00');
+  const dateLabel = mo[dt.getMonth()] + ' ' + dt.getDate() + ', ' + dt.getFullYear();
+
+  const listHtml = goals.length === 0
+    ? '<div class="dg-empty">No goals yet — add one above</div>'
+    : goals.map((g, i) => `
+        <div class="dg-item ${g.done ? 'done' : ''}" data-idx="${i}">
+          <div class="dg-check" data-action="toggle" data-idx="${i}">${g.done ? '✓' : ''}</div>
+          <div class="dg-text">${g.text}</div>
+          <button class="dg-del" data-action="delete" data-idx="${i}">×</button>
+        </div>`).join('');
+
+  const progressHtml = total > 0
+    ? `<div class="dg-progress">${done} of ${total} done${done === total && total > 0 ? ' 🎉' : ''}</div>`
+    : '';
+
+  el.innerHTML = `
+    <div class="daily-goals-section">
+      <div class="daily-goals-head">
+        <span>Daily Goals</span>
+        <span class="dg-date">${dateLabel}</span>
+      </div>
+      <div class="daily-goals-body">
+        <div class="dg-add-row">
+          <input class="dg-input" id="dgInput" type="text" placeholder="Add a goal for today…" maxlength="120" />
+          <button class="dg-add-btn" id="dgAddBtn">+ Add</button>
+        </div>
+        <div class="dg-list">${listHtml}</div>
+        ${progressHtml}
+      </div>
+    </div>`;
+
+  // Add goal
+  function addGoal() {
+    const input = document.getElementById('dgInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const goals = getDailyGoals(dateStr);
+    goals.push({ text, done: false });
+    saveDailyGoals(dateStr, goals);
+    input.value = '';
+    renderDailyGoals();
+    document.getElementById('dgInput')?.focus();
+  }
+  document.getElementById('dgAddBtn').addEventListener('click', addGoal);
+  document.getElementById('dgInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addGoal();
+  });
+
+  // Toggle / delete
+  el.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.idx);
+      const goals = getDailyGoals(dateStr);
+      if (btn.dataset.action === 'toggle') {
+        goals[idx].done = !goals[idx].done;
+        saveDailyGoals(dateStr, goals);
+        renderDailyGoals();
+      } else if (btn.dataset.action === 'delete') {
+        goals.splice(idx, 1);
+        saveDailyGoals(dateStr, goals);
+        renderDailyGoals();
+      }
+    });
+  });
 }
 
 // fetchHealthSync is called from the auth flow above (after pullStateFromCloud
