@@ -1748,13 +1748,17 @@ function renderGoals() {
   const wkGoal = state.weeklyGoals[wkStr] || {};
 
   // Weight section
+  // In day view: show that day's logged weight; otherwise show latest trend
+  const displayWeight = viewMode === 'day'
+    ? ((state.daily[ymd(viewDate)] || {}).weight || null)
+    : (lw ? lw.val : null);
   let weightHtml = '';
   if (wg.target) {
-    const cur = lw ? lw.val : null;
+    const cur = displayWeight;
     const togo = cur != null ? (cur - wg.target).toFixed(1) : '—';
     const direction = cur != null && cur > wg.target ? 'lose' : (cur != null && cur < wg.target ? 'gain' : '');
     let pace = '';
-    if (cur != null && wg.targetDate) {
+    if (cur != null && wg.targetDate && viewMode !== 'day') {
       const days = daysBetween(todayStr, wg.targetDate);
       if (days > 0) {
         const lbsPerWeek = ((cur - wg.target) / days * 7).toFixed(2);
@@ -1765,20 +1769,25 @@ function renderGoals() {
     }
     const roc = todayROC();
     let rocHtml = '';
-    if (roc && roc.roc != null) {
+    if (roc && roc.roc != null && viewMode !== 'day') {
       const cls = roc.roc < -0.05 ? 'loss' : (roc.roc > 0.05 ? 'gain' : 'flat');
       const sign = roc.roc > 0 ? '+' : '';
       rocHtml = `<span class="roc-pill ${cls}">${sign}${roc.roc.toFixed(2)}% / wk</span>`;
     }
+    const subNote = viewMode === 'day'
+      ? (cur != null ? Math.abs(togo) + ' lbs to goal' + (wg.targetDate ? ' · target ' + fmtDate(wg.targetDate) : '') : 'Not logged on this day')
+      : (cur != null ? Math.abs(togo) + ' lbs to go' : 'Log a weight to start tracking') + (wg.targetDate ? ' · target ' + fmtDate(wg.targetDate) : '') + (roc && roc.trend ? ' · trend ' + roc.trend.toFixed(1) + ' lbs' : '');
     weightHtml = `
       <div class="big">${cur != null ? cur : '—'} <span style="font-size:13px;color:var(--muted);font-weight:500">→ ${wg.target} lbs</span>${rocHtml}</div>
-      <div class="sub">${cur != null ? Math.abs(togo) + ' lbs to go' : 'Log a weight to start tracking'}${wg.targetDate ? ' · target ' + fmtDate(wg.targetDate) : ''}${roc && roc.trend ? ' · trend ' + roc.trend.toFixed(1) + ' lbs' : ''}</div>
+      <div class="sub">${subNote}</div>
       ${pace ? `<div class="pace">${pace}</div>` : ''}
     `;
   } else {
     const roc = todayROC();
     let inline = '';
-    if (roc && roc.roc != null) {
+    if (displayWeight != null && viewMode === 'day') {
+      inline = `<div class="big" style="margin-top:6px">${displayWeight} lbs logged</div>`;
+    } else if (roc && roc.roc != null) {
       const cls = roc.roc < -0.05 ? 'loss' : (roc.roc > 0.05 ? 'gain' : 'flat');
       const sign = roc.roc > 0 ? '+' : '';
       inline = `<div class="big" style="margin-top:6px">Trend: ${roc.trend.toFixed(1)} lbs <span class="roc-pill ${cls}">${sign}${roc.roc.toFixed(2)}% / wk</span></div>`;
@@ -1786,12 +1795,30 @@ function renderGoals() {
     weightHtml = '<div class="empty">No weight goal set yet.</div>' + inline;
   }
 
+  const setInReviewLink = '<small>Set in <a href="weekly-review.html" style="color:var(--gold);text-decoration:none;font-weight:700;">Weekly Review →</a></small>';
+  const viewDateStr = ymd(viewDate);
+  const isDayView = viewMode === 'day';
+  const dayData = isDayView ? (state.daily[viewDateStr] || {}) : null;
+
   // Helper: render a steps-target card body for a given habit-id + target
   function stepsCardHtml(habitId, target) {
     if (!target) {
-      return `<div class="empty">No target set.<br><small>Set in <a href="weekly-review.html" style="color:var(--gold);text-decoration:none;font-weight:700;">Weekly Review →</a></small></div>`;
+      return `<div class="empty">No target set.<br>${setInReviewLink}</div>`;
     }
-    // Compute date range based on what the user is currently viewing
+    if (isDayView) {
+      // Show just that day's value vs target
+      const val = dayData[habitId] || null;
+      if (val == null) return `<div class="empty">Not logged on this day.</div>`;
+      const pct = Math.min(100, Math.round((val / target) * 100));
+      const diff = val - target;
+      const status = diff >= 0 ? `✓ ${fmtNum(diff)} above goal` : `${fmtNum(Math.abs(diff))} below goal`;
+      return `
+        <div class="big">${fmtNum(val)} <span style="font-size:13px;color:var(--muted);font-weight:500">/ ${fmtNum(target)} steps</span></div>
+        <div class="sub">${status}</div>
+        <div class="mini-bar"><div class="fill" style="width:${pct}%"></div></div>
+      `;
+    }
+    // Week / month / year — show period average
     let startD, endD;
     if (viewMode === 'week') {
       startD = startOfWeek(viewDate);
@@ -1825,10 +1852,28 @@ function renderGoals() {
   const morningStepsHtml = stepsCardHtml('walk6k',  wkGoal.morning_steps);
   const totalStepsHtml   = stepsCardHtml('walk12k', sg.daily);
 
-  // Daily calories (max)
-  const setInReviewLink = '<small>Set in <a href="weekly-review.html" style="color:var(--gold);text-decoration:none;font-weight:700;">Weekly Review →</a></small>';
+  // Daily calories
   let caloriesHtml;
-  if (wkGoal.calorie) {
+  if (isDayView) {
+    const val = dayData.calorie_goal != null ? dayData.calorie_goal : null;
+    const tgt = wkGoal.calorie;
+    if (val == null) {
+      caloriesHtml = tgt
+        ? `<div class="empty">Not logged. Target: ≤ ${fmtNum(tgt)} cal/day</div>`
+        : `<div class="empty">Not logged on this day.</div>`;
+    } else {
+      const under = tgt ? (val <= tgt) : null;
+      const statusStr = tgt
+        ? (under ? `✓ ${fmtNum(tgt - val)} under target` : `${fmtNum(val - tgt)} over target`)
+        : '';
+      const pct = tgt ? Math.min(100, Math.round((val / tgt) * 100)) : null;
+      caloriesHtml = `
+        <div class="big">${fmtNum(val)}<span style="font-size:13px;color:var(--muted);font-weight:500"> cal</span>${tgt ? `<span style="font-size:13px;color:var(--muted);font-weight:500"> / ≤ ${fmtNum(tgt)}</span>` : ''}</div>
+        ${statusStr ? `<div class="sub">${statusStr}</div>` : ''}
+        ${pct != null ? `<div class="mini-bar"><div class="fill" style="width:${pct}%;background:var(--red)"></div></div>` : ''}
+      `;
+    }
+  } else if (wkGoal.calorie) {
     caloriesHtml = `
       <div class="big">≤ ${fmtNum(wkGoal.calorie)}<span style="font-size:13px;color:var(--muted);font-weight:500"> cal/day</span></div>
       <div class="sub">Week of ${fmtRange(startOfWeek(viewDate))}</div>
@@ -1837,9 +1882,28 @@ function renderGoals() {
     caloriesHtml = `<div class="empty">No daily calorie target set.<br>${setInReviewLink}</div>`;
   }
 
-  // Daily protein (min)
+  // Daily protein
   let proteinHtml;
-  if (wkGoal.protein) {
+  if (isDayView) {
+    const val = dayData.protein_goal != null ? dayData.protein_goal : null;
+    const tgt = wkGoal.protein;
+    if (val == null) {
+      proteinHtml = tgt
+        ? `<div class="empty">Not logged. Target: ${fmtNum(tgt)} g/day</div>`
+        : `<div class="empty">Not logged on this day.</div>`;
+    } else {
+      const hit = tgt ? (val >= tgt) : null;
+      const statusStr = tgt
+        ? (hit ? `✓ ${fmtNum(val - tgt)} above target` : `${fmtNum(tgt - val)} g to go`)
+        : '';
+      const pct = tgt ? Math.min(100, Math.round((val / tgt) * 100)) : null;
+      proteinHtml = `
+        <div class="big">${fmtNum(val)}<span style="font-size:13px;color:var(--muted);font-weight:500"> g</span>${tgt ? `<span style="font-size:13px;color:var(--muted);font-weight:500"> / ${fmtNum(tgt)} g</span>` : ''}</div>
+        ${statusStr ? `<div class="sub">${statusStr}</div>` : ''}
+        ${pct != null ? `<div class="mini-bar"><div class="fill" style="width:${pct}%;background:var(--green)"></div></div>` : ''}
+      `;
+    }
+  } else if (wkGoal.protein) {
     proteinHtml = `
       <div class="big">${fmtNum(wkGoal.protein)}<span style="font-size:13px;color:var(--muted);font-weight:500"> g/day</span></div>
       <div class="sub">Week of ${fmtRange(startOfWeek(viewDate))}</div>
