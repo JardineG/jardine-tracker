@@ -1647,72 +1647,73 @@ function attachCellHandlers(scope) {
 }
 
 // ---------- Month-grid floating cell editor ----------
-(function() {
-  const popup  = document.getElementById('gridEditPopup');
-  const label  = document.getElementById('gepLabel');
-  const input  = document.getElementById('gepInput');
-  let activeChip = null;
+// Elements are looked up lazily (they live after </script> in the HTML)
+let _gepActiveChip = null;
+function _gep() { return document.getElementById('gridEditPopup'); }
+function _gepLabel() { return document.getElementById('gepLabel'); }
+function _gepInput() { return document.getElementById('gepInput'); }
 
-  function closePopup(save) {
-    if (!activeChip) return;
-    if (save) {
-      const ds  = activeChip.dataset.date;
-      const hid = activeChip.dataset.habit;
-      const typ = activeChip.dataset.type;
-      let v;
-      if (typ === 'time') {
-        v = normalizeTime(input.value);
-      } else {
-        v = input.value.trim() === '' ? null : parseFloat(input.value);
-      }
-      setDailyHabit(ds, hid, isNaN(v) ? null : v);
-      renderAll();
-    }
-    popup.classList.remove('show');
-    activeChip = null;
-  }
-
-  window.openGridEditPopup = function(chip, e) {
-    activeChip = chip;
-    label.textContent = chip.dataset.label || '';
-    const typ = chip.dataset.type;
+function _gepClose(save) {
+  if (!_gepActiveChip) return;
+  const popup = _gep(), input = _gepInput();
+  if (save && popup && input) {
+    const ds  = _gepActiveChip.dataset.date;
+    const hid = _gepActiveChip.dataset.habit;
+    const typ = _gepActiveChip.dataset.type;
+    let v;
     if (typ === 'time') {
-      input.type = 'text';
-      input.inputMode = 'numeric';
-      input.maxLength = 5;
+      v = normalizeTime(input.value);
     } else {
-      input.type = 'number';
-      input.inputMode = 'decimal';
-      input.removeAttribute('maxlength');
+      v = input.value.trim() === '' ? null : parseFloat(input.value);
+      if (isNaN(v)) v = null;
     }
-    input.value = chip.dataset.val || '';
+    setDailyHabit(ds, hid, v);
+    renderAll();
+  }
+  if (popup) popup.classList.remove('show');
+  _gepActiveChip = null;
+}
 
-    // Position popup near click, keep on screen
-    popup.classList.add('show');
-    const pw = popup.offsetWidth, ph = popup.offsetHeight;
-    const vw = window.innerWidth, vh = window.innerHeight;
-    let x = e.clientX - pw / 2;
-    let y = e.clientY + 12;
-    if (x + pw > vw - 8) x = vw - pw - 8;
-    if (x < 8) x = 8;
-    if (y + ph > vh - 8) y = e.clientY - ph - 12;
-    popup.style.left = x + 'px';
-    popup.style.top  = y + 'px';
-    input.focus();
-    input.select();
-  };
+window.openGridEditPopup = function(chip, e) {
+  const popup = _gep(), label = _gepLabel(), input = _gepInput();
+  if (!popup || !input) return;
+  _gepActiveChip = chip;
+  if (label) label.textContent = chip.dataset.label || '';
+  const typ = chip.dataset.type;
+  if (typ === 'time') {
+    input.type = 'text'; input.inputMode = 'numeric'; input.maxLength = 5;
+  } else {
+    input.type = 'number'; input.inputMode = 'decimal'; input.removeAttribute('maxlength');
+  }
+  input.value = chip.dataset.val || '';
+  popup.classList.add('show');
+  const pw = popup.offsetWidth, ph = popup.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let x = e.clientX - pw / 2, y = e.clientY + 12;
+  if (x + pw > vw - 8) x = vw - pw - 8;
+  if (x < 8) x = 8;
+  if (y + ph > vh - 8) y = e.clientY - ph - 12;
+  popup.style.left = x + 'px'; popup.style.top = y + 'px';
+  input.focus(); input.select();
+};
 
+// Wire up popup events after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const input = _gepInput();
+  if (!input) return;
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); closePopup(true); }
-    if (e.key === 'Escape') { e.preventDefault(); closePopup(false); }
+    if (e.key === 'Enter')  { e.preventDefault(); _gepClose(true);  }
+    if (e.key === 'Escape') { e.preventDefault(); _gepClose(false); }
   });
-  input.addEventListener('blur', () => setTimeout(() => closePopup(true), 120));
+  input.addEventListener('blur', () => setTimeout(() => _gepClose(true), 120));
   document.addEventListener('click', e => {
-    if (popup.classList.contains('show') && !popup.contains(e.target) && !e.target.classList.contains('grid-chip')) {
-      closePopup(true);
+    const popup = _gep();
+    if (popup && popup.classList.contains('show') &&
+        !popup.contains(e.target) && !e.target.classList.contains('grid-chip')) {
+      _gepClose(true);
     }
   });
-})();
+});
 
 function renderWeekly() {
   // Determine which weeks to show based on view mode
