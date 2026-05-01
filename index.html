@@ -514,7 +514,7 @@
   .dg-add-btn:hover { opacity: 0.88; }
   .dg-list { display: flex; flex-direction: column; gap: 6px; }
   .dg-item {
-    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px;
     border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
     transition: background 0.1s;
   }
@@ -523,15 +523,25 @@
     width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line);
     background: #fff; cursor: pointer; flex-shrink: 0; display: flex;
     align-items: center; justify-content: center; font-size: 13px;
-    transition: all 0.12s;
+    transition: all 0.12s; margin-top: 3px;
   }
   .dg-item.done .dg-check { background: var(--teal); border-color: var(--teal); color: #fff; }
   .dg-text { flex: 1; font-size: 14px; line-height: 1.3; }
   .dg-item.done .dg-text { text-decoration: line-through; color: var(--muted); }
+  .dg-row-input {
+    flex: 1; min-width: 0;
+    padding: 0; border: none; outline: none;
+    font-size: 14px; font-family: inherit; color: var(--ink);
+    background: transparent; resize: none; overflow: hidden;
+    line-height: 1.5; min-height: 22px; display: block; width: 100%;
+  }
+  .dg-row-input::placeholder { color: var(--muted); }
+  .dg-row-input:focus { outline: none; }
+  .dg-item.done .dg-row-input { text-decoration: line-through; color: var(--muted); }
   .dg-del {
     background: transparent; border: 0; color: var(--muted); cursor: pointer;
     font-size: 16px; padding: 2px 4px; border-radius: 4px; opacity: 0;
-    transition: opacity 0.1s;
+    transition: opacity 0.1s; flex-shrink: 0; margin-top: 1px;
   }
   .dg-item:hover .dg-del { opacity: 1; }
   .dg-del:hover { background: var(--red-soft); color: var(--red); }
@@ -2523,8 +2533,8 @@ function renderDailyGoals(focusIdx) {
   const rowsHtml = rows.map((g, i) => `
     <div class="dg-item ${g.done && g.text ? 'done' : ''}" data-idx="${i}">
       <div class="dg-check ${!g.text ? 'dg-check-empty' : ''}" data-action="toggle" data-idx="${i}">${g.done && g.text ? '✓' : ''}</div>
-      <input class="dg-row-input" type="text" data-idx="${i}" value="${g.text.replace(/"/g,'&quot;')}"
-        placeholder="Goal ${i + 1}…" maxlength="120" ${g.done ? 'style="text-decoration:line-through;color:var(--muted)"' : ''} />
+      <textarea class="dg-row-input" data-idx="${i}" rows="1"
+        placeholder="Goal ${i + 1}…" maxlength="300">${g.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
       <button class="dg-del" data-action="delete" data-idx="${i}" ${!g.text ? 'style="opacity:0;pointer-events:none"' : ''}>×</button>
     </div>`).join('');
 
@@ -2544,11 +2554,20 @@ function renderDailyGoals(focusIdx) {
       </div>
     </div>`;
 
+  // Auto-resize a textarea to fit its content
+  function autoResize(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+
   // Focus requested row
   if (focusIdx != null) {
     const inputs = el.querySelectorAll('.dg-row-input');
-    if (inputs[focusIdx]) inputs[focusIdx].focus();
+    if (inputs[focusIdx]) { inputs[focusIdx].focus(); autoResize(inputs[focusIdx]); }
   }
+
+  // Auto-resize all on render
+  el.querySelectorAll('.dg-row-input').forEach(ta => autoResize(ta));
 
   // Save all rows back (strip empty trailing rows)
   function saveRows() {
@@ -2563,6 +2582,8 @@ function renderDailyGoals(focusIdx) {
   }
 
   el.querySelectorAll('.dg-row-input').forEach((inp, i) => {
+    // Auto-resize as user types
+    inp.addEventListener('input', () => autoResize(inp));
     // Enter → move to next row, creating one if needed
     inp.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
@@ -2571,6 +2592,7 @@ function renderDailyGoals(focusIdx) {
         const inputs = el.querySelectorAll('.dg-row-input');
         if (i + 1 < inputs.length) {
           inputs[i + 1].focus();
+          autoResize(inputs[i + 1]);
         } else {
           // Add a new row
           const goals = getDailyGoals(dateStr);
