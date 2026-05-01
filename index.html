@@ -1647,7 +1647,7 @@ function attachCellHandlers(scope) {
 }
 
 // ---------- Month-grid floating cell editor ----------
-// Elements are looked up lazily (they live after </script> in the HTML)
+// Elements are looked up lazily (popup div lives after the script block in the HTML)
 let _gepActiveChip = null;
 function _gep() { return document.getElementById('gridEditPopup'); }
 function _gepLabel() { return document.getElementById('gepLabel'); }
