@@ -120,14 +120,16 @@
   table.grid thead th.today-col { background: var(--today); border-radius: 6px 6px 0 0; }
   table.grid tbody td.today-col { background: var(--today); }
   table.grid tbody tr:hover { background: rgba(0,0,0,0.015); }
-  table.grid td.habit-name {
-    text-align: left; padding: 8px 12px; font-size: 13px; min-width: 250px; max-width: 250px;
+  table.grid { table-layout: fixed; }
+  table.grid th.habit-name, table.grid td.habit-name {
+    text-align: left; padding: 8px 12px; font-size: 13px; width: 250px; min-width: 250px; max-width: 250px;
     border-right: 1px solid var(--line); background: var(--panel); position: sticky; left: 0; z-index: 2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   table.grid tbody tr:hover td.habit-name { background: #faf7f0; }
-  table.grid td.streak-cell {
+  table.grid th.streak-cell, table.grid td.streak-cell {
     text-align: right; padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--muted);
-    border-right: 1px solid var(--line); min-width: 70px; background: var(--panel);
+    border-right: 1px solid var(--line); width: 70px; min-width: 70px; max-width: 70px; background: var(--panel);
     position: sticky; left: 250px; z-index: 2;
   }
   table.grid tbody tr:hover td.streak-cell { background: #faf7f0; }
@@ -381,8 +383,8 @@
     .day-row .streak { min-width: 36px; font-size: 11px; }
     .day-row .control { min-width: 80px; }
     .day-row .num-input { width: 76px; }
-    table.grid td.habit-name { min-width: 150px; max-width: 150px; font-size: 12px; }
-    table.grid td.streak-cell { left: 150px; min-width: 54px; padding: 0 8px; font-size: 11px; }
+    table.grid th.habit-name, table.grid td.habit-name { width: 150px; min-width: 150px; max-width: 150px; font-size: 12px; }
+    table.grid th.streak-cell, table.grid td.streak-cell { left: 150px; width: 54px; min-width: 54px; max-width: 54px; padding: 0 8px; font-size: 11px; }
     .modal { padding: 18px; }
     .modal h2 { font-size: 17px; }
     .footer .center { font-size: 13px; }
