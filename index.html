@@ -2502,32 +2502,34 @@ function saveDailyGoals(dateStr, goals) {
   save();
 }
 
-function renderDailyGoals() {
+function renderDailyGoals(focusIdx) {
   const el = document.getElementById('dailyGoalsSection');
   if (!el) return;
-  // Only show in day view
   if (viewMode !== 'day') { el.innerHTML = ''; return; }
 
   const dateStr = ymd(viewDate);
   const goals = getDailyGoals(dateStr);
-  const done = goals.filter(g => g.done).length;
-  const total = goals.length;
+  const MIN_ROWS = 3;
+  // Pad to at least MIN_ROWS rows for display
+  const rows = [...goals];
+  while (rows.length < MIN_ROWS) rows.push({ text: '', done: false, _empty: true });
 
   const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const dt = new Date(dateStr + 'T00:00:00');
   const dateLabel = mo[dt.getMonth()] + ' ' + dt.getDate() + ', ' + dt.getFullYear();
+  const done = goals.filter(g => g.done).length;
+  const total = goals.filter(g => g.text.trim()).length;
 
-  const listHtml = goals.length === 0
-    ? '<div class="dg-empty">No goals yet — add one above</div>'
-    : goals.map((g, i) => `
-        <div class="dg-item ${g.done ? 'done' : ''}" data-idx="${i}">
-          <div class="dg-check" data-action="toggle" data-idx="${i}">${g.done ? '✓' : ''}</div>
-          <div class="dg-text">${g.text}</div>
-          <button class="dg-del" data-action="delete" data-idx="${i}">×</button>
-        </div>`).join('');
+  const rowsHtml = rows.map((g, i) => `
+    <div class="dg-item ${g.done && g.text ? 'done' : ''}" data-idx="${i}">
+      <div class="dg-check ${!g.text ? 'dg-check-empty' : ''}" data-action="toggle" data-idx="${i}">${g.done && g.text ? '✓' : ''}</div>
+      <input class="dg-row-input" type="text" data-idx="${i}" value="${g.text.replace(/"/g,'&quot;')}"
+        placeholder="Goal ${i + 1}…" maxlength="120" ${g.done ? 'style="text-decoration:line-through;color:var(--muted)"' : ''} />
+      <button class="dg-del" data-action="delete" data-idx="${i}" ${!g.text ? 'style="opacity:0;pointer-events:none"' : ''}>×</button>
+    </div>`).join('');
 
   const progressHtml = total > 0
-    ? `<div class="dg-progress">${done} of ${total} done${done === total && total > 0 ? ' 🎉' : ''}</div>`
+    ? `<div class="dg-progress">${done} of ${total} done${done === total ? ' 🎉' : ''}</div>`
     : '';
 
   el.innerHTML = `
@@ -2537,47 +2539,73 @@ function renderDailyGoals() {
         <span class="dg-date">${dateLabel}</span>
       </div>
       <div class="daily-goals-body">
-        <div class="dg-add-row">
-          <input class="dg-input" id="dgInput" type="text" placeholder="Add a goal for today…" maxlength="120" />
-          <button class="dg-add-btn" id="dgAddBtn">+ Add</button>
-        </div>
-        <div class="dg-list">${listHtml}</div>
+        <div class="dg-list">${rowsHtml}</div>
         ${progressHtml}
       </div>
     </div>`;
 
-  // Add goal
-  function addGoal() {
-    const input = document.getElementById('dgInput');
-    const text = input.value.trim();
-    if (!text) return;
-    const goals = getDailyGoals(dateStr);
-    goals.push({ text, done: false });
-    saveDailyGoals(dateStr, goals);
-    input.value = '';
-    renderDailyGoals();
-    document.getElementById('dgInput')?.focus();
+  // Focus requested row
+  if (focusIdx != null) {
+    const inputs = el.querySelectorAll('.dg-row-input');
+    if (inputs[focusIdx]) inputs[focusIdx].focus();
   }
-  document.getElementById('dgAddBtn').addEventListener('click', addGoal);
-  document.getElementById('dgInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addGoal();
+
+  // Save all rows back (strip empty trailing rows)
+  function saveRows() {
+    const inputs = el.querySelectorAll('.dg-row-input');
+    const updated = [];
+    inputs.forEach((inp, i) => {
+      const text = inp.value.trim();
+      const wasDone = rows[i] ? rows[i].done : false;
+      if (text) updated.push({ text, done: wasDone });
+    });
+    saveDailyGoals(dateStr, updated);
+  }
+
+  el.querySelectorAll('.dg-row-input').forEach((inp, i) => {
+    // Enter → move to next row, creating one if needed
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveRows();
+        const inputs = el.querySelectorAll('.dg-row-input');
+        if (i + 1 < inputs.length) {
+          inputs[i + 1].focus();
+        } else {
+          // Add a new row
+          const goals = getDailyGoals(dateStr);
+          goals.push({ text: '', done: false });
+          saveDailyGoals(dateStr, goals);
+          renderDailyGoals(i + 1);
+        }
+      }
+    });
+    // Save on blur
+    inp.addEventListener('blur', () => saveRows());
   });
 
-  // Toggle / delete
-  el.querySelectorAll('[data-action]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const idx = parseInt(btn.dataset.idx);
+  // Toggle done
+  el.querySelectorAll('[data-action="toggle"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.dataset.idx);
+      if (!rows[i] || !rows[i].text) return;
+      saveRows();
       const goals = getDailyGoals(dateStr);
-      if (btn.dataset.action === 'toggle') {
-        goals[idx].done = !goals[idx].done;
-        saveDailyGoals(dateStr, goals);
-        renderDailyGoals();
-      } else if (btn.dataset.action === 'delete') {
-        goals.splice(idx, 1);
-        saveDailyGoals(dateStr, goals);
-        renderDailyGoals();
-      }
+      if (goals[i]) goals[i].done = !goals[i].done;
+      saveDailyGoals(dateStr, goals);
+      renderDailyGoals();
+    });
+  });
+
+  // Delete row
+  el.querySelectorAll('[data-action="delete"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.dataset.idx);
+      saveRows();
+      const goals = getDailyGoals(dateStr);
+      goals.splice(i, 1);
+      saveDailyGoals(dateStr, goals);
+      renderDailyGoals(Math.max(0, i - 1));
     });
   });
 }
