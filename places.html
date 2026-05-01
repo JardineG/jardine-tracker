@@ -397,35 +397,60 @@ if (!localStorage.getItem(SEED_FLAG_KEY)) {
 }
 
 // ---------- Map setup (Leaflet + OpenStreetMap) ----------
-const map = L.map('map', { worldCopyJump: true }).setView([20, 0], 2);
+const worldBounds = L.latLngBounds([[-85, -180], [85, 180]]);
+const map = L.map('map', {
+  maxBounds: worldBounds,
+  maxBoundsViscosity: 1.0,
+  minZoom: 2,
+}).setView([20, 10], 2);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   subdomains: 'abcd',
   maxZoom: 19,
+  noWrap: true,
+  bounds: worldBounds,
 }).addTo(map);
 
-// Custom gold pin icon
+// Gold pushpin icon
 const goldIcon = L.divIcon({
   className: 'custom-pin',
-  html: `<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
-    <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#c89a3a"/>
-    <circle cx="14" cy="14" r="5" fill="#fff"/>
+  html: `<svg width="26" height="38" viewBox="0 0 26 38" xmlns="http://www.w3.org/2000/svg">
+    <!-- needle -->
+    <line x1="13" y1="24" x2="13" y2="37" stroke="#7a5c1e" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- collar -->
+    <ellipse cx="13" cy="24" rx="4.5" ry="2" fill="#a07820"/>
+    <!-- head shadow -->
+    <circle cx="13" cy="12" r="11" fill="rgba(0,0,0,0.15)" transform="translate(1,1)"/>
+    <!-- head -->
+    <circle cx="13" cy="12" r="11" fill="#c89a3a"/>
+    <circle cx="13" cy="12" r="11" fill="none" stroke="#a07820" stroke-width="1.5"/>
+    <!-- shine -->
+    <circle cx="9.5" cy="8.5" r="3.5" fill="rgba(255,255,255,0.32)"/>
   </svg>`,
-  iconSize: [28, 36],
-  iconAnchor: [14, 36],
-  popupAnchor: [0, -32],
+  iconSize: [26, 38],
+  iconAnchor: [13, 38],
+  popupAnchor: [0, -36],
 });
 
-// Gray pin for date-unknown entries
+// Gray pushpin for date-unknown entries
 const grayIcon = L.divIcon({
   className: 'custom-pin',
-  html: `<svg width="24" height="30" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
-    <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#9ca3af"/>
-    <circle cx="14" cy="14" r="5" fill="#fff"/>
+  html: `<svg width="22" height="32" viewBox="0 0 26 38" xmlns="http://www.w3.org/2000/svg">
+    <!-- needle -->
+    <line x1="13" y1="24" x2="13" y2="37" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- collar -->
+    <ellipse cx="13" cy="24" rx="4.5" ry="2" fill="#9ca3af"/>
+    <!-- head shadow -->
+    <circle cx="13" cy="12" r="11" fill="rgba(0,0,0,0.12)" transform="translate(1,1)"/>
+    <!-- head -->
+    <circle cx="13" cy="12" r="11" fill="#d1d5db"/>
+    <circle cx="13" cy="12" r="11" fill="none" stroke="#9ca3af" stroke-width="1.5"/>
+    <!-- shine -->
+    <circle cx="9.5" cy="8.5" r="3.5" fill="rgba(255,255,255,0.35)"/>
   </svg>`,
-  iconSize: [24, 30],
-  iconAnchor: [12, 30],
-  popupAnchor: [0, -26],
+  iconSize: [22, 32],
+  iconAnchor: [11, 32],
+  popupAnchor: [0, -30],
 });
 
 // ---------- Nominatim geocoding ----------
