@@ -2044,9 +2044,13 @@ function buildWeightChart(series, days) {
     const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()];
     axisX += `<text x="${x}" y="${h-6}" text-anchor="middle" font-size="10" fill="#999">${mo} ${dt.getDate()}</text>`;
   }
-  const rawPath  = series.map((e,i) => `${i?'L':'M'} ${xS(new Date(e.date+'T00:00:00').getTime()).toFixed(1)} ${yS(e.weight).toFixed(1)}`).join(' ');
+  const bw = Math.max(2, Math.min(10, (innerW / series.length) * 0.7));
+  const bars = series.map(e => {
+    const x = xS(new Date(e.date+'T00:00:00').getTime());
+    const top = yS(e.weight), bot = yS(minW);
+    return `<rect x="${(x-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw}" height="${(bot-top).toFixed(1)}" fill="#c89a3a" opacity="0.5" rx="2"/>`;
+  }).join('');
   const trendPath = series.map((e,i) => `${i?'L':'M'} ${xS(new Date(e.date+'T00:00:00').getTime()).toFixed(1)} ${yS(e.trend).toFixed(1)}`).join(' ');
-  const dots = series.map(e => `<circle cx="${xS(new Date(e.date+'T00:00:00').getTime()).toFixed(1)}" cy="${yS(e.weight).toFixed(1)}" r="2.5" fill="#c89a3a" opacity="0.5"/>`).join('');
   const wg = state.goals.weight || {};
   let goalLine = '';
   if (wg.target && wg.target >= minW && wg.target <= maxW) {
@@ -2056,12 +2060,11 @@ function buildWeightChart(series, days) {
   }
   return `<div class="chart-card">
     <h3>Weight Trend</h3>
-    <div class="ch-sub">Raw daily weight (dots) · smoothed trend (line)</div>
+    <div class="ch-sub">Daily weight (bars) · smoothed trend (line)</div>
     <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
-      ${axisY}${goalLine}
-      <path d="${rawPath}" fill="none" stroke="#c89a3a" stroke-width="1" opacity="0.35"/>
+      ${axisY}${goalLine}${bars}
       <path d="${trendPath}" fill="none" stroke="#1f5f5f" stroke-width="2.5" stroke-linejoin="round"/>
-      ${dots}${axisX}
+      ${axisX}
     </svg>
   </div>`;
 }
@@ -2105,19 +2108,12 @@ function buildActivityChart(habitId, title, unit, days, cutStr, invert) {
     axisX += `<text x="${x}" y="${h-6}" text-anchor="middle" font-size="10" fill="#999">${mo} ${dt.getDate()}</text>`;
   }
   const color = invert ? '#7a2030' : '#1f5f5f';
-  // Draw bars if few entries, line if many
-  let dataViz = '';
-  if (entries.length <= 35) {
-    const bw = Math.max(2, Math.min(12, (innerW / entries.length) * 0.7));
-    dataViz = entries.map(e => {
-      const x = xS(new Date(e.date+'T00:00:00').getTime());
-      const top = yS(e.val), bot = yS(0);
-      return `<rect x="${(x - bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw}" height="${(bot-top).toFixed(1)}" fill="${color}" opacity="0.75" rx="2"/>`;
-    }).join('');
-  } else {
-    const path = entries.map((e,i) => `${i?'L':'M'} ${xS(new Date(e.date+'T00:00:00').getTime()).toFixed(1)} ${yS(e.val).toFixed(1)}`).join(' ');
-    dataViz = `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
-  }
+  const bw = Math.max(1.5, Math.min(12, (innerW / entries.length) * 0.7));
+  const dataViz = entries.map(e => {
+    const x = xS(new Date(e.date+'T00:00:00').getTime());
+    const top = yS(e.val), bot = yS(0);
+    return `<rect x="${(x - bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw}" height="${(bot-top).toFixed(1)}" fill="${color}" opacity="0.75" rx="2"/>`;
+  }).join('');
 
   return `<div class="chart-card">
     <h3>${title}</h3>
