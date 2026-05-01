@@ -73,11 +73,17 @@
   @media (max-width: 760px) { .add-row { grid-template-columns: 1fr; } }
   .field { display: flex; flex-direction: column; gap: 4px; position: relative; }
   .field label { font-size: 11px; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
-  .field input {
+  .field input[type="text"], .field input[type="date"] {
     padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px;
     background: #fff; font-family: inherit; color: var(--ink);
   }
   .field input:focus { outline: none; border-color: var(--gold); }
+  .field input:disabled { background: var(--bg); color: var(--muted); cursor: not-allowed; }
+  .unknown-toggle {
+    display: flex; align-items: center; gap: 6px; margin-top: 6px;
+    font-size: 12px; color: var(--muted); cursor: pointer; user-select: none;
+  }
+  .unknown-toggle input[type="checkbox"] { accent-color: var(--gold); cursor: pointer; }
   .btn-primary {
     padding: 10px 20px; background: var(--gold); color: #fff; border: 0; border-radius: 8px;
     font-weight: 700; cursor: pointer; font-size: 14px; font-family: inherit;
@@ -137,6 +143,7 @@
   .place-list-head {
     padding: 12px 16px; border-bottom: 1px solid var(--line);
     font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 700;
+    display: flex; align-items: center; justify-content: space-between;
   }
   .place-list-body { overflow-y: auto; flex: 1; }
   .place-row {
@@ -158,6 +165,15 @@
   }
   .place-row:hover .delete { display: block; }
   .place-row .delete:hover { background: var(--red-soft); color: var(--red); }
+  .unknown-badge {
+    display: inline-block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    background: #f0ece3; color: var(--muted); border-radius: 4px;
+    padding: 2px 6px; margin-top: 4px; font-weight: 600;
+  }
+  .section-divider {
+    padding: 8px 16px; background: var(--bg); border-bottom: 1px solid var(--line);
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
 
   .empty-list {
     padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px;
@@ -219,6 +235,9 @@
       <div class="field">
         <label for="dateInput">Date visited</label>
         <input id="dateInput" type="date" />
+        <label class="unknown-toggle">
+          <input type="checkbox" id="unknownCheck" /> Date unknown
+        </label>
       </div>
       <div class="field">
         <label for="notesInput">Note (optional)</label>
@@ -238,7 +257,9 @@
   <div class="map-layout">
     <div id="map"></div>
     <div class="place-list">
-      <div class="place-list-head">Pins · <span id="pinCount">0</span></div>
+      <div class="place-list-head">
+        <span>Pins · <span id="pinCount">0</span></span>
+      </div>
       <div class="place-list-body" id="placeListBody"></div>
     </div>
   </div>
@@ -252,12 +273,127 @@
 <script>
 // ---------- Storage ----------
 const STORAGE_KEY = 'infiniteYouTracker_places_v1';
+const SEED_FLAG_KEY = 'infiniteYouTracker_places_seed_v2';
+
 let places = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-let selected = null; // { name, displayName, country, countryCode, lat, lng } from Nominatim
-let markers = {}; // id -> Leaflet marker
+let selected = null;
+let markers = {};
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(places));
+}
+
+// ---------- Seed data ----------
+function makeSeedEntry(name, country, countryCode, lat, lng, dateVisited, datePrecision, notes) {
+  return {
+    id: 'seed_' + name.replace(/\s+/g,'_').toLowerCase() + '_' + (dateVisited||'unknown').replace(/-/g,''),
+    name, country, countryCode, lat, lng,
+    dateVisited: dateVisited || null,
+    datePrecision: datePrecision || 'full',
+    notes: notes || '',
+    displayName: name + ', ' + country + (dateVisited ? ' (' + dateVisited.substring(0,4) + ')' : ''),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+const SEED_DATA = [
+  // 2016 — Dubai · Orlando · Caribbean Cruise
+  makeSeedEntry('Dubai','United Arab Emirates','ae',25.2048,55.2708,'2016-06-01','month','En route to Florida — with sisters + daughter'),
+  makeSeedEntry('Orlando','United States','us',28.5383,-81.3792,'2016-06-01','month','Caribbean cruise trip — Disney, with sisters + daughter'),
+  makeSeedEntry('San Juan','Puerto Rico','pr',18.4655,-66.1057,'2016-06-01','month','Caribbean cruise stop'),
+  makeSeedEntry('St. Thomas','U.S. Virgin Islands','vi',18.3358,-64.8963,'2016-06-01','month','Caribbean cruise stop'),
+  makeSeedEntry('Tortola','British Virgin Islands','vg',18.4178,-64.6281,'2016-06-01','month','Caribbean cruise stop'),
+  makeSeedEntry('St. Maarten','Sint Maarten','sx',18.0425,-63.0548,'2016-06-01','month','Caribbean cruise stop'),
+  makeSeedEntry('Castaway Cay','Bahamas','bs',26.7730,-77.5381,'2016-06-01','month','Disney private island — Caribbean cruise'),
+
+  // 2017 — Europe
+  makeSeedEntry('Paris','France','fr',48.8566,2.3522,'2017-03-29','full','Europe trip — 6 nights'),
+  makeSeedEntry('Amsterdam','Netherlands','nl',52.3676,4.9041,'2017-04-04','full','Europe trip — 3 nights'),
+  makeSeedEntry('Prague','Czech Republic','cz',50.0755,14.4378,'2017-04-07','full','Europe trip — 4 nights'),
+  makeSeedEntry('Barcelona','Spain','es',41.3851,2.1734,'2017-04-11','full','Europe trip — 5 nights'),
+  makeSeedEntry('Rome','Italy','it',41.9028,12.4964,'2017-04-16','full','Europe trip — 5 nights'),
+  makeSeedEntry('Positano','Italy','it',40.6280,14.4840,'2017-04-21','full','Europe trip — 1 night, Amalfi Coast'),
+
+  // 2017 — Asia
+  makeSeedEntry('Bangkok','Thailand','th',13.7563,100.5018,'2017-07-31','full','MMG trip — Jul 31–Aug 2'),
+  makeSeedEntry('Ho Chi Minh City','Vietnam','vn',10.8231,106.6297,'2017-10-10','full','One World Network Annual General Meeting'),
+  makeSeedEntry('Penang','Malaysia','my',5.4141,100.3288,'2017-10-26','full','ALFA Annual Conference'),
+
+  // 2018
+  makeSeedEntry('Boston','United States','us',42.3601,-71.0589,'2018-09-06','full','Harvard Business School — Sep 6–28'),
+  makeSeedEntry('New York City','United States','us',40.7128,-74.0060,'2018-09-28','full','Paramount Times Square + Dream Downtown — Sep 28–Oct 9'),
+
+  // 2019
+  makeSeedEntry('Hong Kong','Hong Kong','hk',22.3193,114.1694,'2019-01-10','full','Family trip — Hotel Madera Hollywood, Central'),
+  makeSeedEntry('Hong Kong (Mar)','Hong Kong','hk',22.3200,114.1700,'2019-03-10','month','MMG business trip'),
+  makeSeedEntry('Boston (Apr 2019)','United States','us',42.3601,-71.0589,'2019-04-13','full','Apr 13–18'),
+  makeSeedEntry('Boston (Oct 2019)','United States','us',42.3605,-71.0585,'2019-10-03','full','Oct 3–18'),
+  makeSeedEntry('San Francisco','United States','us',37.7749,-122.4194,'2019-10-18','full','Oct 18–29'),
+  makeSeedEntry('Dallas','United States','us',32.7767,-96.7970,'2019-10-30','full','Oct 30–Nov 2'),
+
+  // 2022 — Copenhagen · Iceland
+  makeSeedEntry('Istanbul','Turkey','tr',41.0082,28.9784,'2022-09-28','full','Full day stopover en route to Copenhagen'),
+  makeSeedEntry('Copenhagen','Denmark','dk',55.6761,12.5683,'2022-09-28','full','Sep 28–30 + Oct 10 — full day on return'),
+  makeSeedEntry('Iceland','Iceland','is',64.1355,-21.8954,'2022-09-30','full','Sep 30–Oct 9'),
+  makeSeedEntry('Singapore','Singapore','sg',1.3521,103.8198,'2022-11-11','full','Medical — Raffles Hospital, Nov 11–13'),
+
+  // 2023 — Spain · France · Portugal
+  makeSeedEntry('Madrid','Spain','es',40.4168,-3.7038,'2023-01-26','full','Spain · France · Portugal trip'),
+  makeSeedEntry('Granada','Spain','es',37.1773,-3.5986,'2023-01-29','full','Alhambra'),
+  makeSeedEntry('Segovia','Spain','es',40.9429,-4.1088,'2023-01-30','full',''),
+  makeSeedEntry('San Sebastián','Spain','es',43.3183,-1.9812,'2023-01-31','full','Jan 31–Feb 5'),
+  makeSeedEntry('Bordeaux','France','fr',44.8378,-0.5792,'2023-02-05','full','Feb 5–9'),
+  makeSeedEntry('Lisbon','Portugal','pt',38.7223,-9.1393,'2023-02-09','full','Feb 9–13'),
+  makeSeedEntry('Porto','Portugal','pt',41.1579,-8.6291,'2023-02-13','full','Feb 13–17'),
+
+  // 2024
+  makeSeedEntry('Tokyo (Feb 2024)','Japan','jp',35.6762,139.6503,'2024-02-28','full','Feb 28–Mar 7 — Tokyo → Sapporo → Niseko'),
+  makeSeedEntry('Sapporo','Japan','jp',43.0618,141.3545,'2024-02-28','full','ANA domestic from Tokyo — Hokkaido'),
+  makeSeedEntry('Niseko','Japan','jp',42.8067,140.6876,'2024-03-01','full','Ski resort, Hokkaido — returned Mar 7'),
+  makeSeedEntry('Philadelphia','United States','us',39.9526,-75.1652,'2024-04-06','full','Sofitel Philadelphia at Rittenhouse Square — Apr 6–8'),
+  makeSeedEntry('Bali','Indonesia','id',-8.3405,115.0920,'2024-06-16','full','EO Accelerator — Jun 16–21'),
+  makeSeedEntry('Hong Kong (Dec 2024)','Hong Kong','hk',22.3190,114.1690,'2024-12-27','full','New Year\'s cruise embarkation — Dec 27–29'),
+  makeSeedEntry('Naha, Okinawa','Japan','jp',26.2124,127.6809,'2024-12-31','full','New Year\'s Eve cruise stopover — departed Jan 1 at 14:30'),
+
+  // 2025
+  makeSeedEntry('Honolulu','United States','us',21.3069,-157.8583,'2025-04-04','full','MyEO Hawaii dinner at Giovedi — Apr 4–5'),
+  makeSeedEntry('Jakarta','Indonesia','id',-6.2088,106.8456,'2025-06-02','full','Jun 2–6'),
+  makeSeedEntry('Mt. Fuji','Japan','jp',35.3606,138.7274,'2025-08-02','full','Fuji hike — Aug 2–6'),
+  makeSeedEntry('Surabaya','Indonesia','id',-7.2575,112.7521,'2025-09-04','full','EO Asia Bridge Forum (ABF)'),
+  makeSeedEntry('Chiang Mai','Thailand','th',18.7883,98.9853,'2025-11-25','full','Nov 25–27'),
+  makeSeedEntry('Osaka','Japan','jp',34.6937,135.5023,'2025-12-23','full','Dec 23–Jan 1, 2026 — New Year\'s in Japan'),
+
+  // 2026 — Japan Solo Trip
+  makeSeedEntry('Tokyo (Apr 2026)','Japan','jp',35.6762,139.6503,'2026-04-02','full','Japan Solo Trip — Apr 2–5, Tokyo Hotel'),
+  makeSeedEntry('Kamakura','Japan','jp',35.3197,139.5467,'2026-04-04','full','Day trip — Great Buddha, Hokokuji Bamboo Temple'),
+  makeSeedEntry('Shibu Onsen','Japan','jp',36.7447,138.4219,'2026-04-05','full','Nagano area — Kanaguya Ryokan'),
+  makeSeedEntry('Hakone','Japan','jp',35.2329,139.1068,'2026-04-06','full','Lake Ashi, Hakone Shrine, Ropeway — Hakone Yuyado Zen'),
+
+  // 2026 — Upcoming
+  makeSeedEntry('Auckland','New Zealand','nz',-36.8509,174.7645,'2026-05-14','full','ABF Auckland — JW Marriott, May 14–17'),
+
+  // Date unknown
+  makeSeedEntry('Las Vegas','United States','us',36.1699,-115.1398,null,'unknown',''),
+  makeSeedEntry('Reno','United States','us',39.5296,-119.8138,null,'unknown',''),
+  makeSeedEntry('Los Angeles','United States','us',34.0522,-118.2437,null,'unknown',''),
+  makeSeedEntry('Niagara Falls','United States','us',43.0962,-79.0377,null,'unknown','Near New York'),
+  makeSeedEntry('New York City (extra visit)','United States','us',40.7130,-74.0058,null,'unknown','Additional visit beyond 2018'),
+  makeSeedEntry('Honolulu (extra visit)','United States','us',21.3071,-157.8581,null,'unknown','Additional visit beyond Apr 2025'),
+  makeSeedEntry('Taipei','Taiwan','tw',25.0330,121.5654,null,'unknown',''),
+  makeSeedEntry('Beijing','China','cn',39.9042,116.4074,null,'unknown',''),
+  makeSeedEntry('Macau','Macau','mo',22.1987,113.5439,null,'unknown',''),
+  makeSeedEntry('Shanghai','China','cn',31.2304,121.4737,null,'unknown',''),
+  makeSeedEntry('Bangkok (extra visit)','Thailand','th',13.7565,100.5020,null,'unknown','Additional visit beyond Jul 2017'),
+  makeSeedEntry('Ho Chi Minh City (extra visit)','Vietnam','vn',10.8233,106.6299,null,'unknown','Additional visit beyond Oct 2017'),
+];
+
+// Seed on first load (only if places array is empty)
+if (!localStorage.getItem(SEED_FLAG_KEY)) {
+  if (places.length === 0) {
+    places = SEED_DATA;
+    save();
+  }
+  localStorage.setItem(SEED_FLAG_KEY, '1');
 }
 
 // ---------- Map setup (Leaflet + OpenStreetMap) ----------
@@ -280,8 +416,19 @@ const goldIcon = L.divIcon({
   popupAnchor: [0, -32],
 });
 
-// ---------- Nominatim geocoding (OSM, no API key) ----------
-// Docs: https://nominatim.org/release-docs/develop/api/Search/
+// Gray pin for date-unknown entries
+const grayIcon = L.divIcon({
+  className: 'custom-pin',
+  html: `<svg width="24" height="30" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#9ca3af"/>
+    <circle cx="14" cy="14" r="5" fill="#fff"/>
+  </svg>`,
+  iconSize: [24, 30],
+  iconAnchor: [12, 30],
+  popupAnchor: [0, -26],
+});
+
+// ---------- Nominatim geocoding ----------
 let searchTimer = null;
 let lastQuery = '';
 
@@ -311,6 +458,8 @@ const suggestions = document.getElementById('suggestions');
 const previewChip = document.getElementById('previewChip');
 const previewName = document.getElementById('previewName');
 const previewCoords = document.getElementById('previewCoords');
+const unknownCheck = document.getElementById('unknownCheck');
+const dateInput = document.getElementById('dateInput');
 
 locationInput.addEventListener('input', () => {
   const q = locationInput.value.trim();
@@ -333,6 +482,11 @@ locationInput.addEventListener('focus', () => {
   if (suggestions.children.length > 0 && locationInput.value.trim().length >= 2) {
     suggestions.classList.add('show');
   }
+});
+
+unknownCheck.addEventListener('change', () => {
+  dateInput.disabled = unknownCheck.checked;
+  if (unknownCheck.checked) dateInput.value = '';
 });
 
 function renderSuggestions(results) {
@@ -363,7 +517,6 @@ function selectSuggestion(r) {
   previewCoords.textContent = `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`;
   previewChip.classList.add('show');
   suggestions.classList.remove('show');
-  // Preview on map
   map.flyTo([r.lat, r.lng], 6, { duration: 0.8 });
 }
 
@@ -386,21 +539,19 @@ function addPlace() {
     locationInput.focus();
     return;
   }
-  // Dedupe by displayName (same city shouldn't appear twice)
-  const existing = places.find(p => p.displayName === selected.displayName);
-  if (existing) {
-    alert(`${selected.name} is already pinned.`);
-    return;
-  }
+  const isUnknown = unknownCheck.checked;
+  const dateVal = isUnknown ? null : (dateInput.value || null);
+
   const entry = {
     id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
     name: selected.name,
-    displayName: selected.displayName,
+    displayName: selected.displayName + (dateVal ? ' (' + dateVal.substring(0,4) + ')' : ''),
     country: selected.country,
     countryCode: selected.countryCode,
     lat: selected.lat,
     lng: selected.lng,
-    dateVisited: document.getElementById('dateInput').value || null,
+    dateVisited: dateVal,
+    datePrecision: isUnknown ? 'unknown' : 'full',
     notes: document.getElementById('notesInput').value.trim(),
     createdAt: new Date().toISOString(),
   };
@@ -413,7 +564,9 @@ function addPlace() {
 
 function resetForm() {
   locationInput.value = '';
-  document.getElementById('dateInput').value = todayYmd();
+  dateInput.value = todayYmd();
+  dateInput.disabled = false;
+  unknownCheck.checked = false;
   document.getElementById('notesInput').value = '';
   selected = null;
   previewChip.classList.remove('show');
@@ -432,11 +585,12 @@ function deletePlace(id) {
 
 // ---------- Markers ----------
 function addMarker(p) {
-  const marker = L.marker([p.lat, p.lng], { icon: goldIcon }).addTo(map);
+  const icon = (p.datePrecision === 'unknown') ? grayIcon : goldIcon;
+  const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
   marker.bindPopup(`
     <div class="popup-title">${escapeHtml(p.name)}</div>
     <div class="popup-country">${escapeHtml(p.country || '')}</div>
-    ${p.dateVisited ? `<div class="popup-date">Visited ${fmtDate(p.dateVisited)}</div>` : ''}
+    ${p.dateVisited ? `<div class="popup-date">Visited ${fmtDate(p.dateVisited, p.datePrecision)}</div>` : '<div class="popup-date" style="color:#9ca3af">Date unknown</div>'}
     ${p.notes ? `<div class="popup-notes">"${escapeHtml(p.notes)}"</div>` : ''}
   `);
   markers[p.id] = marker;
@@ -458,13 +612,17 @@ function render() {
 
 function renderStats() {
   const total = places.length;
-  const countries = new Set(places.map(p => p.country).filter(Boolean)).size;
+  const countries = new Set(
+    places.map(p => (p.countryCode || p.country || '').toLowerCase()).filter(Boolean)
+  ).size;
   const thisYear = new Date().getFullYear();
-  const visitedThisYear = places.filter(p => p.dateVisited && new Date(p.dateVisited).getFullYear() === thisYear).length;
+  const visitedThisYear = places.filter(p => p.dateVisited && new Date(p.dateVisited + 'T00:00:00').getFullYear() === thisYear).length;
+  const unknownCount = places.filter(p => p.datePrecision === 'unknown').length;
   document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="label">Cities pinned</div><div class="value">${total}</div></div>
+    <div class="stat"><div class="label">Cities visited</div><div class="value">${total}</div></div>
     <div class="stat"><div class="label">Countries</div><div class="value">${countries}</div></div>
     <div class="stat"><div class="label">Visited in ${thisYear}</div><div class="value">${visitedThisYear}</div></div>
+    <div class="stat"><div class="label">Date unknown</div><div class="value" style="color:var(--muted);font-size:22px">${unknownCount}</div></div>
   `;
 }
 
@@ -475,15 +633,28 @@ function renderList() {
     body.innerHTML = `<div class="empty-list"><div class="big">🗺️</div><div>No pins yet — add your first place above.</div></div>`;
     return;
   }
-  body.innerHTML = places.map(p => `
-    <div class="place-row" data-id="${p.id}">
-      <button class="delete" data-id="${p.id}" title="Remove">×</button>
-      <div class="name">${escapeHtml(p.name)}</div>
-      <div class="country">${escapeHtml(p.country || '')}</div>
-      ${p.dateVisited ? `<div class="date">${fmtDate(p.dateVisited)}</div>` : ''}
-      ${p.notes ? `<div class="notes">"${escapeHtml(p.notes)}"</div>` : ''}
-    </div>
-  `).join('');
+
+  // Split: dated vs unknown
+  const dated = places.filter(p => p.datePrecision !== 'unknown' && p.dateVisited)
+    .sort((a, b) => (b.dateVisited || '').localeCompare(a.dateVisited || ''));
+  const unknown = places.filter(p => p.datePrecision === 'unknown' || !p.dateVisited)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  let html = '';
+
+  dated.forEach(p => {
+    html += renderRow(p);
+  });
+
+  if (unknown.length) {
+    html += `<div class="section-divider">📍 Date Unknown (${unknown.length})</div>`;
+    unknown.forEach(p => {
+      html += renderRow(p);
+    });
+  }
+
+  body.innerHTML = html;
+
   body.querySelectorAll('.place-row').forEach(row => {
     row.addEventListener('click', (e) => {
       if (e.target.classList.contains('delete')) return;
@@ -498,27 +669,51 @@ function renderList() {
   });
 }
 
+function renderRow(p) {
+  const dateStr = (p.datePrecision === 'unknown' || !p.dateVisited)
+    ? `<div class="unknown-badge">Date unknown</div>`
+    : `<div class="date">${fmtDate(p.dateVisited, p.datePrecision)}</div>`;
+  return `
+    <div class="place-row" data-id="${p.id}">
+      <button class="delete" data-id="${p.id}" title="Remove">×</button>
+      <div class="name">${escapeHtml(p.name)}</div>
+      <div class="country">${escapeHtml(p.country || '')}</div>
+      ${dateStr}
+      ${p.notes ? `<div class="notes">"${escapeHtml(p.notes)}"</div>` : ''}
+    </div>
+  `;
+}
+
 // ---------- Helpers ----------
 function todayYmd() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
-function fmtDate(iso) {
+
+function fmtDate(iso, precision) {
   if (!iso) return '';
+  precision = precision || 'full';
+  if (precision === 'unknown') return 'Date unknown';
+  if (precision === 'year') return iso.substring(0, 4);
+  if (precision === 'month') {
+    const [y, m] = iso.split('-');
+    const d = new Date(parseInt(y), parseInt(m)-1, 1);
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
+
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
 // ---------- Bootstrap ----------
-document.getElementById('dateInput').value = todayYmd();
+dateInput.value = todayYmd();
 places.forEach(addMarker);
-// If there are existing pins, zoom to fit them
 if (places.length > 0) {
   const bounds = L.latLngBounds(places.map(p => [p.lat, p.lng]));
-  map.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 });
+  map.fitBounds(bounds, { padding: [40, 40], maxZoom: 5 });
 }
 render();
 </script>
