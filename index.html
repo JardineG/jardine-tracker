@@ -548,6 +548,45 @@
   .dg-empty { font-size: 13px; color: var(--muted); font-style: italic; padding: 4px 0; }
   .dg-progress { font-size: 11px; color: var(--muted); margin-top: 8px; letter-spacing: 0.5px; }
 
+  /* Month-view compact chips (replace inputs that overflow narrow cells) */
+  .grid-chip {
+    display: block; width: 100%; cursor: pointer;
+    font-size: 10px; font-weight: 700; text-align: center;
+    color: var(--muted); line-height: 26px;
+    white-space: nowrap; overflow: hidden;
+    border-radius: 3px; border: 1px solid transparent;
+    transition: background 0.1s;
+  }
+  .grid-chip:hover { background: rgba(0,0,0,0.06); border-color: var(--line); }
+  .morning .grid-chip.has-val { color: var(--teal); border-color: var(--teal); background: var(--teal-soft); }
+  .morning .grid-chip.hit     { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .evening .grid-chip.has-val { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+  .evening .grid-chip.hit     { background: var(--red); color: #fff; border-color: var(--red); }
+
+  /* Floating editor popup */
+  #gridEditPopup {
+    position: fixed; z-index: 10000;
+    background: #fff; border: 2px solid var(--gold);
+    border-radius: 12px; padding: 12px 14px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+    display: none; min-width: 170px;
+  }
+  #gridEditPopup.show { display: block; }
+  .gep-label {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px; font-weight: 700;
+  }
+  #gepInput {
+    width: 100%; font-size: 20px; font-weight: 800; text-align: center;
+    border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 6px;
+    font-family: inherit; color: var(--ink); outline: none; box-sizing: border-box;
+    -moz-appearance: textfield; appearance: textfield;
+  }
+  #gepInput::-webkit-outer-spin-button,
+  #gepInput::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #gepInput:focus { border-color: var(--gold); }
+  .gep-hint { font-size: 10px; color: var(--muted); text-align: center; margin-top: 6px; letter-spacing: 0.3px; }
+
   /* Dashboard (Overview tab) */
   .dash-toolbar {
     display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
@@ -1483,7 +1522,6 @@ function renderGrid(wrapId, habits, sectionType) {
       const val = getDay(ds)[h.id];
       if (h.type === 'number') {
         const has = val != null && val !== '' && val !== false;
-        // Resolve target: static habit target, OR per-week goal for protein/calorie/morning-steps
         let target = h.target;
         if (h.id === 'protein_goal' || h.id === 'calorie_goal') {
           const wg = state.weeklyGoals[getISOWeek(date)] || {};
@@ -1494,15 +1532,30 @@ function renderGrid(wrapId, habits, sectionType) {
         }
         const hit = has && target && (h.id === 'calorie_goal' ? val <= target : val >= target);
         const display = has ? val : '';
-        tbody += `<td class="cell num-cell ${isToday?'today-col':''}">
-          <input type="number" class="num-input ${has?'has-val':''} ${hit?'hit':''}" value="${display}" placeholder="—" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />
-        </td>`;
+        if (viewMode === 'month') {
+          // Compact chip — click to open floating editor
+          const chipLabel = has ? chipFmt(val) : '—';
+          tbody += `<td class="cell num-cell ${isToday?'today-col':''}">
+            <div class="grid-chip ${has?'has-val':''} ${hit?'hit':''}" data-date="${ds}" data-habit="${h.id}" data-type="number" data-val="${display}" data-label="${h.name}" ${isFuture?'data-disabled="1"':''}>${chipLabel}</div>
+          </td>`;
+        } else {
+          tbody += `<td class="cell num-cell ${isToday?'today-col':''}">
+            <input type="number" class="num-input ${has?'has-val':''} ${hit?'hit':''}" value="${display}" placeholder="—" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />
+          </td>`;
+        }
       } else if (h.type === 'time') {
         const has = typeof val === 'string' && val.length > 0;
         const hit = has && h.target && val <= h.target;
-        tbody += `<td class="cell time-cell ${isToday?'today-col':''}">
-          <input type="text" inputmode="numeric" maxlength="5" class="time-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" placeholder="—" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />
-        </td>`;
+        if (viewMode === 'month') {
+          const chipLabel = has ? val.replace(/^0/, '') : '—';
+          tbody += `<td class="cell time-cell ${isToday?'today-col':''}">
+            <div class="grid-chip ${has?'has-val':''} ${hit?'hit':''}" data-date="${ds}" data-habit="${h.id}" data-type="time" data-val="${has?val:''}" data-label="${h.name}" ${isFuture?'data-disabled="1"':''}>${chipLabel}</div>
+          </td>`;
+        } else {
+          tbody += `<td class="cell time-cell ${isToday?'today-col':''}">
+            <input type="text" inputmode="numeric" maxlength="5" class="time-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" placeholder="—" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />
+          </td>`;
+        }
       } else {
         const done = !!val;
         tbody += `<td class="cell ${isToday?'today-col':''}">
@@ -1584,7 +1637,82 @@ function attachCellHandlers(scope) {
       renderAll();
     });
   });
+  // Month-view chips → floating editor
+  scope.querySelectorAll('.grid-chip').forEach(chip => {
+    if (chip.dataset.disabled) return;
+    chip.addEventListener('click', e => {
+      openGridEditPopup(chip, e);
+    });
+  });
 }
+
+// ---------- Month-grid floating cell editor ----------
+(function() {
+  const popup  = document.getElementById('gridEditPopup');
+  const label  = document.getElementById('gepLabel');
+  const input  = document.getElementById('gepInput');
+  let activeChip = null;
+
+  function closePopup(save) {
+    if (!activeChip) return;
+    if (save) {
+      const ds  = activeChip.dataset.date;
+      const hid = activeChip.dataset.habit;
+      const typ = activeChip.dataset.type;
+      let v;
+      if (typ === 'time') {
+        v = normalizeTime(input.value);
+      } else {
+        v = input.value.trim() === '' ? null : parseFloat(input.value);
+      }
+      setDailyHabit(ds, hid, isNaN(v) ? null : v);
+      renderAll();
+    }
+    popup.classList.remove('show');
+    activeChip = null;
+  }
+
+  window.openGridEditPopup = function(chip, e) {
+    activeChip = chip;
+    label.textContent = chip.dataset.label || '';
+    const typ = chip.dataset.type;
+    if (typ === 'time') {
+      input.type = 'text';
+      input.inputMode = 'numeric';
+      input.maxLength = 5;
+    } else {
+      input.type = 'number';
+      input.inputMode = 'decimal';
+      input.removeAttribute('maxlength');
+    }
+    input.value = chip.dataset.val || '';
+
+    // Position popup near click, keep on screen
+    popup.classList.add('show');
+    const pw = popup.offsetWidth, ph = popup.offsetHeight;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let x = e.clientX - pw / 2;
+    let y = e.clientY + 12;
+    if (x + pw > vw - 8) x = vw - pw - 8;
+    if (x < 8) x = 8;
+    if (y + ph > vh - 8) y = e.clientY - ph - 12;
+    popup.style.left = x + 'px';
+    popup.style.top  = y + 'px';
+    input.focus();
+    input.select();
+  };
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); closePopup(true); }
+    if (e.key === 'Escape') { e.preventDefault(); closePopup(false); }
+  });
+  input.addEventListener('blur', () => setTimeout(() => closePopup(true), 120));
+  document.addEventListener('click', e => {
+    if (popup.classList.contains('show') && !popup.contains(e.target) && !e.target.classList.contains('grid-chip')) {
+      closePopup(true);
+    }
+  });
+})();
 
 function renderWeekly() {
   // Determine which weeks to show based on view mode
@@ -1730,6 +1858,16 @@ function ytdSteps() {
   return total;
 }
 function fmtNum(n) { return n.toLocaleString('en-US'); }
+// Compact number for narrow month-view chips (e.g. 8851 → "8.9k", 156.4 → "156")
+function chipFmt(v) {
+  if (v == null || v === '') return '—';
+  const n = parseFloat(v);
+  if (isNaN(n)) return String(v);
+  if (Math.abs(n) >= 10000) return Math.round(n / 1000) + 'k';
+  if (Math.abs(n) >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  if (n !== Math.floor(n)) return parseFloat(n.toFixed(1)).toString();
+  return String(n);
+}
 function fmtDate(iso) {
   if (!iso) return '';
   const d = new Date(iso + 'T00:00:00');
@@ -2707,5 +2845,11 @@ document.addEventListener('visibilitychange', () => {
 setInterval(() => { if (currentUser) fetchHealthSync(); }, 5 * 60 * 1000);
 
 </script>
+<!-- Floating grid cell editor (used by month view number/time chips) -->
+<div id="gridEditPopup">
+  <div class="gep-label" id="gepLabel"></div>
+  <input id="gepInput" autocomplete="off" />
+  <div class="gep-hint">Enter to save · Esc to cancel</div>
+</div>
 </body>
 </html>
