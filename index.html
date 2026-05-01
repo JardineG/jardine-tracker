@@ -2422,19 +2422,31 @@ function renderHealthCard(h, today) {
 }
 
 function prefillFromHealth(h, today) {
-  const day = getDay(today);
+  // Always sync from HealthKit — health data is the source of truth.
+  // Manual overrides are visible in the health card as "overridden".
   let changed = false;
   for (const [healthKey, habitId] of Object.entries(HEALTH_SYNC_MAP)) {
     const val = h[healthKey];
     if (val == null) continue;
-    setDailyHabit(today, habitId, Math.round(val));
-    changed = true;
+    const rounded = Math.round(val);
+    if (!state.daily[today]) state.daily[today] = {};
+    if (state.daily[today][habitId] !== rounded) {
+      state.daily[today][habitId] = rounded;
+      changed = true;
+    }
   }
   if (changed) { save(); renderAll(); }
 }
 
 // fetchHealthSync is called from the auth flow above (after pullStateFromCloud
 // completes), to avoid prefill racing with the initial cloud pull.
+
+// Re-fetch health data whenever the tab becomes visible (user switches back)
+// and on a 5-minute poll while the page is open.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentUser) fetchHealthSync();
+});
+setInterval(() => { if (currentUser) fetchHealthSync(); }, 5 * 60 * 1000);
 
 </script>
 </body>
