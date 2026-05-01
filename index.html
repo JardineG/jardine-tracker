@@ -477,48 +477,8 @@
   .health-metric .override-note { font-size: 10px; color: var(--gold); font-weight: 600; }
 
   /* Memento Mori */
-  .memento-head { background: #2d2d2d; }
-  .mm-head-meta { float: right; font-weight: 500; opacity: 0.8; font-size: 11px; font-style: italic; letter-spacing: 0; }
-  .mm-body { padding: 16px; }
-  .mm-setup { padding: 16px; }
-  .mm-setup p { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
-  .mm-setup-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .mm-setup input[type="date"] {
-    height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
-    font-size: 14px; font-family: inherit; color: var(--ink); background: var(--bg);
-  }
-  .mm-save-btn {
-    background: var(--ink); color: #fff; border: none; border-radius: 8px;
-    padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit;
-  }
-  .mm-save-btn:hover { opacity: 0.8; }
-  .mm-chart-row { display: flex; gap: 8px; align-items: flex-start; }
-  .mm-grid-wrap { flex-shrink: 0; }
-  .mm-grid { display: grid; grid-template-columns: repeat(52, 4px); gap: 1px; }
-  .mm-cell { width: 4px; height: 4px; border-radius: 1px; background: var(--line); }
-  .mm-cell.lived { background: var(--ink); }
-  .mm-cell.current { background: var(--gold); box-shadow: 0 0 3px var(--gold); }
-  .mm-labels-col { position: relative; flex-shrink: 0; width: 28px; }
-  .mm-label { position: absolute; left: 0; font-size: 10px; color: var(--muted); font-weight: 600; line-height: 1; transform: translateY(-50%); }
-  .mm-legend { margin-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
-  .mm-legend-cell { display: inline-block; width: 8px; height: 8px; border-radius: 1px; background: var(--line); vertical-align: middle; }
-  .mm-legend-cell.lived { background: var(--ink); }
-  .mm-legend-cell.current { background: var(--gold); }
-  .mm-edit { margin-top: 10px; }
-  .mm-change-btn {
-    background: none; border: 1px solid var(--line); border-radius: 6px;
-    padding: 4px 10px; cursor: pointer; font-size: 11px; color: var(--muted); font-family: inherit;
-  }
-  .mm-change-btn:hover { background: var(--bg); color: var(--ink); }
-
-  /* Top 2-column layout */
-  .top-layout {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-    align-items: start;
-  }
+  /* Top layout — single column now that Memento Mori is removed */
+  .top-layout { margin-bottom: 16px; }
   .top-right-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   .top-right-col .goals-card,
   .top-right-col .today-panel,
@@ -527,6 +487,42 @@
   @media (max-width: 960px) {
     .top-layout { grid-template-columns: 1fr; }
   }
+  /* Dashboard (Overview tab) */
+  .dash-toolbar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .dash-period-btn {
+    padding: 7px 16px; border-radius: 20px; border: 1.5px solid var(--line);
+    background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.8px; cursor: pointer; font-family: inherit; transition: all 0.12s;
+  }
+  .dash-period-btn:hover { border-color: var(--gold); color: var(--ink); }
+  .dash-period-btn.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+  .dash-custom-wrap {
+    display: flex; align-items: center; gap: 6px;
+    border: 1.5px solid var(--line); border-radius: 20px; padding: 4px 10px 4px 14px;
+    background: var(--panel); cursor: pointer;
+  }
+  .dash-custom-wrap.active { border-color: var(--gold); }
+  .dash-custom-wrap label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.8px; cursor: pointer; white-space: nowrap; }
+  .dash-custom-wrap.active label { color: var(--gold); }
+  .dash-x-input {
+    width: 46px; border: none; background: transparent; font-size: 13px; font-weight: 800;
+    color: var(--ink); font-family: inherit; text-align: center; outline: none;
+  }
+  .dash-x-input::-webkit-inner-spin-button { opacity: 0; }
+  .dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .dash-stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; border-top: 3px solid var(--line);
+  }
+  .dash-stat.loss { border-top-color: var(--teal); }
+  .dash-stat.gain { border-top-color: var(--red); }
+  .dash-stat.gold { border-top-color: var(--gold); }
+  .dash-stat .ds-label { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
+  .dash-stat .ds-value { font-size: 26px; font-weight: 800; line-height: 1; }
+  .dash-stat .ds-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .dash-charts { display: flex; flex-direction: column; gap: 16px; }
 </style>
 </head>
 <body>
@@ -578,10 +574,7 @@
     </div>
   </div>
 
-  <!-- 2-column top layout: Memento Mori left, dashboard right -->
   <div class="top-layout">
-    <div id="mementoSection"></div>
-
     <div class="top-right-col">
       <!-- Goals card -->
       <div class="goals-card" id="goalsCard"></div>
@@ -1901,41 +1894,238 @@ function renderAll() {
   renderGrid('eveningWrap', eveningHabits, 'evening');
   renderWeekly();
   renderMeta();
-  renderMementoMori();
 }
 
 // ---------- Overview page ----------
-function renderOverview() {
-  const series = getTrendSeries();
-  const container = document.getElementById('overviewView');
+// ---------- Dashboard state ----------
+let dashPeriod = 7; // active period in days (7, 30, or custom)
+let dashCustomDays = 90;
 
-  let statsHtml = '', chartHtml = '', rocHtml = '';
-  if (series.length === 0) {
-    statsHtml = `<div class="chart-card"><h3>Weight Overview</h3>
-      <div class="empty-state">No weight entries yet.<br>Log a weight in Day or Month view to see your trend.</div>
+function renderOverview() {
+  const container = document.getElementById('overviewView');
+  container.innerHTML = buildDashboard(dashPeriod);
+  // wire up period buttons
+  container.querySelectorAll('.dash-period-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      dashPeriod = parseInt(btn.dataset.days);
+      renderOverview();
+    });
+  });
+  // wire up custom input
+  const customWrap = container.querySelector('.dash-custom-wrap');
+  const xInput = container.querySelector('.dash-x-input');
+  if (xInput) {
+    xInput.addEventListener('focus', () => { dashPeriod = dashCustomDays; renderOverview(); });
+    xInput.addEventListener('input', () => {
+      const v = parseInt(xInput.value);
+      if (v > 0) { dashCustomDays = v; dashPeriod = v; renderOverview(); }
+    });
+  }
+}
+
+function buildDashboard(days) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - days + 1);
+  const cutStr = ymd(cutoff);
+
+  // Period label
+  const periodLabel = days === 7 ? 'Last 7 days' : days === 30 ? 'Last 30 days' : `Last ${days} days`;
+
+  // Toolbar
+  const isCustom = (days !== 7 && days !== 30);
+  const toolbar = `
+    <div class="dash-toolbar">
+      <button class="dash-period-btn ${days===7?'active':''}" data-days="7">Last 7 Days</button>
+      <button class="dash-period-btn ${days===30?'active':''}" data-days="30">Last 30 Days</button>
+      <div class="dash-custom-wrap ${isCustom?'active':''}">
+        <label>Last</label>
+        <input class="dash-x-input" type="number" min="1" max="999" value="${dashCustomDays}" />
+        <label>Days</label>
+      </div>
     </div>`;
+
+  // Filter series to period
+  const allSeries = getTrendSeries();
+  const series = allSeries.filter(e => e.date >= cutStr);
+
+  // Weight stats
+  let weightStats = '', weightChart = '';
+  if (series.length >= 2) {
+    const first = series[0], last = series[series.length - 1];
+    const change = last.trend - first.trend;
+    const changeCls = change < -0.05 ? 'loss' : change > 0.05 ? 'gain' : '';
+    const changeSign = change > 0 ? '+' : '';
+    const roc = last.roc != null ? ((last.roc > 0 ? '+' : '') + last.roc.toFixed(2) + '%') : '—';
+    const rocCls = last.roc != null && last.roc < -0.05 ? 'loss' : last.roc != null && last.roc > 0.05 ? 'gain' : '';
+    weightStats = `
+      <div class="dash-stat gold">
+        <div class="ds-label">Current Trend</div>
+        <div class="ds-value">${last.trend.toFixed(1)} <span style="font-size:13px;color:var(--muted);font-weight:500">lbs</span></div>
+        <div class="ds-sub">Raw: ${last.weight.toFixed(1)} lbs</div>
+      </div>
+      <div class="dash-stat ${changeCls}">
+        <div class="ds-label">Weight Change</div>
+        <div class="ds-value">${changeSign}${change.toFixed(1)} <span style="font-size:13px;color:var(--muted);font-weight:500">lbs</span></div>
+        <div class="ds-sub">${periodLabel}</div>
+      </div>
+      <div class="dash-stat ${rocCls}">
+        <div class="ds-label">Weekly ROC</div>
+        <div class="ds-value">${roc}</div>
+        <div class="ds-sub">trend vs 7d ago</div>
+      </div>`;
+    weightChart = buildWeightChart(series, days);
+  } else if (series.length === 1) {
+    weightStats = `<div class="dash-stat gold"><div class="ds-label">Current Trend</div><div class="ds-value">${series[0].trend.toFixed(1)} lbs</div><div class="ds-sub">Only 1 entry in period</div></div>`;
   } else {
-    const _ignored = renderWeightSection(series);
-    statsHtml = _ignored.statsHtml;
-    chartHtml = _ignored.chartHtml;
-    rocHtml = _ignored.rocHtml;
+    weightStats = `<div class="dash-stat"><div class="ds-label">Weight</div><div class="ds-value" style="font-size:16px;color:var(--muted)">No data in period</div></div>`;
   }
 
-  // Activity cards always render
-  const stepsCard = renderActivityCard({
-    title: 'Steps', habitId: 'walk12k', unit: 'steps', invert: false,
-    target: state.goals.steps?.daily || null,
-  });
-  const caloriesCard = renderActivityCard({
-    title: 'Calories', habitId: 'calorie_goal', unit: 'cal', invert: true,
-    target: latestWeeklyTarget('calorie'),
-  });
-  const proteinCard = renderActivityCard({
-    title: 'Protein', habitId: 'protein_goal', unit: 'g', invert: false,
-    target: latestWeeklyTarget('protein'),
-  });
+  // Activity stats for the period
+  function periodStat(habitId, unit, label, invert) {
+    const vals = [];
+    for (const [d, day] of Object.entries(state.daily)) {
+      if (d >= cutStr && d <= ymd(today)) {
+        const v = day[habitId];
+        if (typeof v === 'number' && v > 0) vals.push(v);
+      }
+    }
+    if (!vals.length) return `<div class="dash-stat"><div class="ds-label">${label}</div><div class="ds-value" style="font-size:16px;color:var(--muted)">No data</div></div>`;
+    const avg = vals.reduce((a,b)=>a+b,0) / vals.length;
+    const max = Math.max(...vals), min = Math.min(...vals);
+    return `
+      <div class="dash-stat gold">
+        <div class="ds-label">${label} · Avg</div>
+        <div class="ds-value">${Math.round(avg).toLocaleString()} <span style="font-size:13px;color:var(--muted);font-weight:500">${unit}</span></div>
+        <div class="ds-sub">↑ ${Math.round(max).toLocaleString()} best &nbsp;·&nbsp; ↓ ${Math.round(min).toLocaleString()} low &nbsp;·&nbsp; ${vals.length}d logged</div>
+      </div>`;
+  }
 
-  container.innerHTML = statsHtml + chartHtml + rocHtml + stepsCard + caloriesCard + proteinCard;
+  const stepsStat   = periodStat('walk12k', 'steps', 'Steps', false);
+  const calStat     = periodStat('calorie_goal', 'cal', 'Calories', true);
+  const proteinStat = periodStat('protein_goal', 'g', 'Protein', false);
+
+  // Activity charts
+  const stepsChart   = buildActivityChart('walk12k',      'Steps',    'steps', days, cutStr, false);
+  const calChart     = buildActivityChart('calorie_goal', 'Calories', 'cal',   days, cutStr, true);
+  const proteinChart = buildActivityChart('protein_goal', 'Protein',  'g',     days, cutStr, false);
+
+  return `
+    ${toolbar}
+    <div class="dash-stats">${weightStats}${stepsStat}${calStat}${proteinStat}</div>
+    <div class="dash-charts">${weightChart}${stepsChart}${calChart}${proteinChart}</div>`;
+}
+
+function buildWeightChart(series, days) {
+  if (series.length < 2) return '';
+  const w = 800, h = 220, pad = { l: 50, r: 16, t: 16, b: 28 };
+  const innerW = w - pad.l - pad.r, innerH = h - pad.t - pad.b;
+  const dates = series.map(e => new Date(e.date + 'T00:00:00').getTime());
+  const minT = Math.min(...dates), maxT = Math.max(...dates);
+  const allW = series.flatMap(e => [e.weight, e.trend]);
+  let minW = Math.min(...allW), maxW = Math.max(...allW);
+  const mg = (maxW - minW) * 0.15 || 1; minW -= mg; maxW += mg;
+  const xS = t => pad.l + ((t - minT) / Math.max(1, maxT - minT)) * innerW;
+  const yS = v => pad.t + (1 - (v - minW) / (maxW - minW)) * innerH;
+
+  let axisY = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = minW + (i / 4) * (maxW - minW);
+    const y = yS(v);
+    axisY += `<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="#eee5d3" stroke-width="1"/>
+      <text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#999">${v.toFixed(1)}</text>`;
+  }
+  const nLabels = days <= 14 ? series.length : 4;
+  let axisX = '';
+  for (let i = 0; i < nLabels; i++) {
+    const idx = Math.round(i / (nLabels - 1) * (series.length - 1));
+    const e = series[idx];
+    const x = xS(new Date(e.date + 'T00:00:00').getTime());
+    const dt = new Date(e.date + 'T00:00:00');
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()];
+    axisX += `<text x="${x}" y="${h-6}" text-anchor="middle" font-size="10" fill="#999">${mo} ${dt.getDate()}</text>`;
+  }
+  const rawPath  = series.map((e,i) => `${i?'L':'M'} ${xS(new Date(e.date+'T00:00:00').getTime()).toFixed(1)} ${yS(e.weight).toFixed(1)}`).join(' ');
+  const trendPath = series.map((e,i) => `${i?'L':'M'} ${xS(new Date(e.date+'T00:00:00').getTime()).toFixed(1)} ${yS(e.trend).toFixed(1)}`).join(' ');
+  const dots = series.map(e => `<circle cx="${xS(new Date(e.date+'T00:00:00').getTime()).toFixed(1)}" cy="${yS(e.weight).toFixed(1)}" r="2.5" fill="#c89a3a" opacity="0.5"/>`).join('');
+  const wg = state.goals.weight || {};
+  let goalLine = '';
+  if (wg.target && wg.target >= minW && wg.target <= maxW) {
+    const gy = yS(wg.target);
+    goalLine = `<line x1="${pad.l}" y1="${gy}" x2="${w-pad.r}" y2="${gy}" stroke="#c89a3a" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <text x="${w-pad.r}" y="${gy-4}" text-anchor="end" font-size="10" font-weight="700" fill="#c89a3a">Goal ${wg.target}</text>`;
+  }
+  return `<div class="chart-card">
+    <h3>Weight Trend</h3>
+    <div class="ch-sub">Raw daily weight (dots) · smoothed trend (line)</div>
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+      ${axisY}${goalLine}
+      <path d="${rawPath}" fill="none" stroke="#c89a3a" stroke-width="1" opacity="0.35"/>
+      <path d="${trendPath}" fill="none" stroke="#1f5f5f" stroke-width="2.5" stroke-linejoin="round"/>
+      ${dots}${axisX}
+    </svg>
+  </div>`;
+}
+
+function buildActivityChart(habitId, title, unit, days, cutStr, invert) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const entries = [];
+  for (const [d, day] of Object.entries(state.daily)) {
+    if (d >= cutStr && d <= ymd(today)) {
+      const v = day[habitId];
+      if (typeof v === 'number' && v > 0) entries.push({ date: d, val: v });
+    }
+  }
+  entries.sort((a,b) => a.date.localeCompare(b.date));
+  if (entries.length < 2) return '';
+
+  const w = 800, h = 160, pad = { l: 52, r: 16, t: 12, b: 28 };
+  const innerW = w - pad.l - pad.r, innerH = h - pad.t - pad.b;
+  const dates = entries.map(e => new Date(e.date + 'T00:00:00').getTime());
+  const minT = Math.min(...dates), maxT = Math.max(...dates);
+  const vals = entries.map(e => e.val);
+  const minV = 0, maxV = Math.max(...vals) * 1.1 || 1;
+  const xS = t => pad.l + ((t - minT) / Math.max(1, maxT - minT)) * innerW;
+  const yS = v => pad.t + (1 - (v - minV) / (maxV - minV)) * innerH;
+
+  let axisY = '';
+  for (let i = 0; i <= 3; i++) {
+    const v = (i / 3) * maxV;
+    const y = yS(v);
+    axisY += `<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="#eee5d3" stroke-width="1"/>
+      <text x="${pad.l-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#999">${Math.round(v).toLocaleString()}</text>`;
+  }
+  const nL = days <= 14 ? entries.length : 4;
+  let axisX = '';
+  for (let i = 0; i < nL; i++) {
+    const idx = Math.round(i / (nL - 1) * (entries.length - 1));
+    const e = entries[idx];
+    const x = xS(new Date(e.date + 'T00:00:00').getTime());
+    const dt = new Date(e.date + 'T00:00:00');
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()];
+    axisX += `<text x="${x}" y="${h-6}" text-anchor="middle" font-size="10" fill="#999">${mo} ${dt.getDate()}</text>`;
+  }
+  const color = invert ? '#7a2030' : '#1f5f5f';
+  // Draw bars if few entries, line if many
+  let dataViz = '';
+  if (entries.length <= 35) {
+    const bw = Math.max(2, Math.min(12, (innerW / entries.length) * 0.7));
+    dataViz = entries.map(e => {
+      const x = xS(new Date(e.date+'T00:00:00').getTime());
+      const top = yS(e.val), bot = yS(0);
+      return `<rect x="${(x - bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw}" height="${(bot-top).toFixed(1)}" fill="${color}" opacity="0.75" rx="2"/>`;
+    }).join('');
+  } else {
+    const path = entries.map((e,i) => `${i?'L':'M'} ${xS(new Date(e.date+'T00:00:00').getTime()).toFixed(1)} ${yS(e.val).toFixed(1)}`).join(' ');
+    dataViz = `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+  }
+
+  return `<div class="chart-card">
+    <h3>${title}</h3>
+    <div class="ch-sub">${unit} per day · ${entries.length} days logged</div>
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+      ${axisY}${dataViz}${axisX}
+    </svg>
+  </div>`;
 }
 
 function renderWeightSection(series) {
@@ -2402,89 +2592,6 @@ function prefillFromHealth(h, today) {
 // fetchHealthSync is called from the auth flow above (after pullStateFromCloud
 // completes), to avoid prefill racing with the initial cloud pull.
 
-// ---------- Memento Mori ----------
-function renderMementoMori() {
-  const el = document.getElementById('mementoSection');
-  if (!el) return;
-  const birthday = state.profile?.birthday;
-
-  if (!birthday) {
-    el.innerHTML = `
-      <div class="section" style="margin-bottom:16px">
-        <div class="section-head memento-head">Memento Mori · Life in Weeks</div>
-        <div class="mm-setup">
-          <p>Each square is one week of a 90-year life. Enter your birthday to see how many you've lived — and how many remain.</p>
-          <div class="mm-setup-row">
-            <input type="date" id="mm-bday-input" max="${new Date().toISOString().slice(0,10)}" />
-            <button class="mm-save-btn" onclick="saveBirthday()">Set Birthday</button>
-          </div>
-        </div>
-      </div>`;
-    return;
-  }
-
-  const birth = new Date(birthday + 'T00:00:00');
-  const today = new Date(); today.setHours(0,0,0,0);
-
-  const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
-  const weeksLived = Math.floor((today - birth) / MS_PER_WEEK);
-  const YEARS = 70, WPY = 52, TOTAL = YEARS * WPY;
-  const UNIT = 5; // cell 4px + gap 1px
-
-  const ageYears = Math.floor((today - birth) / (365.25 * 24 * 60 * 60 * 1000));
-  const weeksLeft = Math.max(0, TOTAL - weeksLived);
-
-  let cells = '';
-  for (let i = 0; i < TOTAL; i++) {
-    if (i < weeksLived) cells += '<span class="mm-cell lived"></span>';
-    else if (i === weeksLived) cells += '<span class="mm-cell current"></span>';
-    else cells += '<span class="mm-cell"></span>';
-  }
-
-  let labels = '';
-  for (let y = 0; y <= YEARS; y += 5) {
-    labels += `<div class="mm-label" style="top:${y * UNIT}px">${y}</div>`;
-  }
-
-  el.innerHTML = `
-    <div class="section">
-      <div class="section-head memento-head">
-        Memento Mori
-        <span class="mm-head-meta">Age ${ageYears} &nbsp;·&nbsp; ${weeksLived.toLocaleString()} weeks lived &nbsp;·&nbsp; ${weeksLeft.toLocaleString()} remaining</span>
-      </div>
-      <div class="mm-body">
-        <div class="mm-chart-row">
-          <div class="mm-grid-wrap">
-            <div class="mm-grid">${cells}</div>
-          </div>
-          <div class="mm-labels-col" style="height:${YEARS * UNIT}px">${labels}</div>
-        </div>
-        <div class="mm-legend">
-          <span class="mm-legend-cell lived"></span> Weeks lived &nbsp;&nbsp;
-          <span class="mm-legend-cell current"></span> This week &nbsp;&nbsp;
-          <span class="mm-legend-cell"></span> Weeks ahead
-        </div>
-        <div class="mm-edit">
-          <button class="mm-change-btn" onclick="clearBirthday()">Change birthday</button>
-        </div>
-      </div>
-    </div>`;
-}
-
-function saveBirthday() {
-  const input = document.getElementById('mm-bday-input');
-  if (!input || !input.value) return;
-  if (!state.profile) state.profile = {};
-  state.profile.birthday = input.value;
-  save();
-  renderMementoMori();
-}
-
-function clearBirthday() {
-  if (state.profile) delete state.profile.birthday;
-  save();
-  renderMementoMori();
-}
 </script>
 </body>
 </html>
