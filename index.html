@@ -1422,7 +1422,7 @@ function renderGrid(wrapId, habits, sectionType) {
       } else if (h.type === 'time') {
         const has = typeof val === 'string' && val.length > 0;
         const hit = has && h.target && val <= h.target;
-        control = `<input type="time" class="time-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />`;
+        control = `<input type="text" inputmode="numeric" maxlength="5" placeholder="hh:mm" class="time-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />`;
       } else {
         const done = !!val;
         control = `<div class="circle ${done?'done':''} ${isFuture?'future':''}" data-date="${ds}" data-habit="${h.id}"></div>`;
