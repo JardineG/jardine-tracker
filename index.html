@@ -2199,6 +2199,42 @@ function buildDashboard(days) {
   // Period label
   const periodLabel = days === 7 ? 'Last 7 days' : days === 30 ? 'Last 30 days' : `Last ${days} days`;
 
+  // Quick stats bar (same data as the day/week/month view stats row)
+  const streak = noZeroDayStreak();
+  const longest = longestNoZeroStreak();
+  const gym = weekGymCount();
+  const todayStr2 = ymd(todayDate);
+  const todayC = dayCompletion(todayStr2);
+  let total30 = 0, done30 = 0;
+  for (let i = 0; i < 30; i++) {
+    const dc = dayCompletion(ymd(addDays(todayDate, -i)));
+    total30 += dc.total; done30 += dc.done;
+  }
+  const pct30 = total30 ? Math.round((done30 / total30) * 100) : 0;
+  const statsBar = `
+    <div class="stats-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;">
+      <div class="stat flame gold">
+        <div class="label">No Zero Days</div>
+        <div class="value">${streak}<small>day${streak===1?'':'s'}</small></div>
+      </div>
+      <div class="stat">
+        <div class="label">Longest Streak</div>
+        <div class="value">${longest}<small>days</small></div>
+      </div>
+      <div class="stat">
+        <div class="label">Gym This Week</div>
+        <div class="value">${gym}<small>/ 4</small></div>
+      </div>
+      <div class="stat">
+        <div class="label">Today</div>
+        <div class="value">${todayC.pct}<small>%</small></div>
+      </div>
+      <div class="stat">
+        <div class="label">Last 30 Days</div>
+        <div class="value">${pct30}<small>%</small></div>
+      </div>
+    </div>`;
+
   // Toolbar
   const isCustom = (days !== 7 && days !== 30);
   const toolbar = `
@@ -2278,6 +2314,7 @@ function buildDashboard(days) {
   const proteinChart = buildActivityChart('protein_goal', 'Protein',  'g',     days, cutStr, false);
 
   return `
+    ${statsBar}
     ${toolbar}
     <div class="dash-stats">${weightStats}${stepsStat}${calStat}${proteinStat}</div>
     <div class="dash-charts">${weightChart}${stepsChart}${calChart}${proteinChart}</div>`;
