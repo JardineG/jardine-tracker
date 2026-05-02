@@ -2705,7 +2705,9 @@ function renderHealthCard(h, today) {
   ].filter(m => m.val != null);
 
   if (!items.length) return;
-  const syncTime = h.synced_at ? new Date(h.synced_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+  // Supabase may return timestamps without timezone suffix — treat as UTC so local conversion is correct
+  const rawSyncedAt = h.synced_at ? (h.synced_at.endsWith('Z') || h.synced_at.includes('+') ? h.synced_at : h.synced_at + 'Z') : null;
+  const syncTime = rawSyncedAt ? new Date(rawSyncedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
   document.getElementById('healthBadge').textContent = syncTime ? `synced ${syncTime}` : 'synced';
 
   metrics.innerHTML = items.map(m => {
