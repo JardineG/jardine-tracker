@@ -8,18 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --bg: #EDE8D8;
-    --panel: #F5F1E8;
-    --ink: #2E2E2E;
-    --muted: #7A7A7A;
-    --line: #D4CCBA;
-    --gold: #C2A040;
-    --teal: #196878;
-    --teal-soft: #CCE4E8;
-    --red: #8C1A2C;
-    --red-soft: #EED4D8;
-    --green: #1A4A2A;
-    --green-soft: #D0E8D4;
+    --bg: #EDE8D8; --panel: #F5F1E8; --ink: #2E2E2E; --muted: #7A7A7A;
+    --line: #D4CCBA; --gold: #C2A040; --teal: #196878; --teal-soft: #CCE4E8;
+    --red: #8C1A2C; --red-soft: #EED4D8; --green: #1A4A2A; --green-soft: #D0E8D4;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
@@ -27,118 +18,77 @@
     font-size: 14px; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 24px; }
 
-  .top-nav {
-    display: flex; gap: 4px; margin-bottom: 18px;
-    border-bottom: 1px solid var(--line); flex-wrap: wrap;
-  }
-  .top-nav a {
-    padding: 10px 18px; text-decoration: none; color: var(--muted);
-    font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-    border-bottom: 2px solid transparent; margin-bottom: -1px;
-  }
+  /* Top nav */
+  .top-nav { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .top-nav a { padding: 10px 18px; text-decoration: none; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 2px solid transparent; margin-bottom: -1px; }
   .top-nav a:hover { color: var(--ink); }
   .top-nav a.active { color: var(--ink); border-bottom-color: var(--gold); }
 
-  .header {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 20px;
-    flex-wrap: wrap; gap: 12px;
-  }
+  /* Header */
+  .header { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
   .brand h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
   .brand h1 span { color: var(--gold); }
   .brand .sub { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
 
+  /* Year selector */
+  .year-selector { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .year-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+  .year-btn {
+    padding: 5px 14px; border-radius: 20px; border: 2px solid var(--line);
+    background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: all 0.12s;
+  }
+  .year-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .year-btn.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+
   /* Quarter tabs */
   .q-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
-  .q-tab {
-    padding: 8px 22px; border-radius: 20px; border: 2px solid var(--line);
-    background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700;
-    letter-spacing: 1px; cursor: pointer; font-family: inherit; transition: all 0.12s;
-  }
+  .q-tab { padding: 8px 22px; border-radius: 20px; border: 2px solid var(--line); background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 1px; cursor: pointer; font-family: inherit; transition: all 0.12s; }
   .q-tab:hover { border-color: var(--gold); color: var(--ink); }
   .q-tab.active { background: var(--gold); border-color: var(--gold); color: #fff; }
 
-  /* Quarter panel */
+  /* Quarter panels */
   .q-panel { display: none; }
   .q-panel.active { display: block; }
 
   /* ── Overview grid ── */
-  .ov-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  .ov-quadrant {
-    background: var(--panel);
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    overflow: hidden;
-    min-width: 0;
-  }
-  .ov-q-head {
-    padding: 10px 16px;
-    color: #fff;
-    font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
-  }
+  .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .ov-quadrant { background: var(--panel); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; min-width: 0; transition: outline 0.1s, background 0.1s; }
+  .ov-q-head { padding: 10px 16px; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
   .ov-q-head.Q1 { background: #4A8FD4; }
   .ov-q-head.Q2 { background: var(--gold); }
   .ov-q-head.Q3 { background: var(--teal); }
   .ov-q-head.Q4 { background: var(--green); }
-  .ov-cat-label {
-    font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
-    color: #fff; padding: 4px 14px 3px;
-  }
-  .ov-cat-label.cat-Work               { background: #4A8FD4; }
-  .ov-cat-label.cat-Growth             { background: #1A4A2A; }
-  .ov-cat-label.cat-Joyful             { background: #C2A040; }
-  .ov-cat-label.cat-Health             { background: #8C1A2C; }
-  .ov-cat-label.cat-Family             { background: #196878; }
-  .ov-goal-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 13px;
-    cursor: grab; user-select: none; transition: opacity 0.15s, background 0.1s;
-  }
+  .ov-cat-label { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #fff; padding: 4px 14px 3px; }
+  .ov-cat-label.cat-Work   { background: #4A8FD4; }
+  .ov-cat-label.cat-Growth { background: #1A4A2A; }
+  .ov-cat-label.cat-Joyful { background: #C2A040; }
+  .ov-cat-label.cat-Health { background: #8C1A2C; }
+  .ov-cat-label.cat-Family { background: #196878; }
+  .ov-goal-row { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 13px; cursor: grab; user-select: none; transition: opacity 0.15s, background 0.1s; }
   .ov-goal-row:last-child { border-bottom: none; }
   .ov-goal-row:hover { background: #ede8d0; }
   .ov-goal-row.dragging { opacity: 0.35; cursor: grabbing; }
-  .ov-drag-handle {
-    color: #bbb; font-size: 13px; flex-shrink: 0; line-height: 1;
-    cursor: grab;
-  }
+  .ov-drag-handle { color: #bbb; font-size: 13px; flex-shrink: 0; line-height: 1; }
   .ov-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .ov-dot[data-s="not_started"] { background: #9ca3af; }
   .ov-dot[data-s="in_progress"] { background: #4A8FD4; }
   .ov-dot[data-s="completed"]   { background: #1A4A2A; }
   .ov-dot[data-s="postponed"]   { background: #C2A040; }
   .ov-text { flex: 1; color: var(--ink); line-height: 1.4; }
-  .ov-pill {
-    font-size: 10px; font-weight: 700; border-radius: 20px; padding: 2px 8px; white-space: nowrap;
-  }
+  .ov-pill { font-size: 10px; font-weight: 700; border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
   .ov-pill.not_started { background: #e5e7eb; color: #374151; }
   .ov-pill.in_progress { background: #CCE4E8; color: #196878; }
   .ov-pill.completed   { background: #D0E8D4; color: #1A4A2A; }
   .ov-pill.postponed   { background: #F0E8C8; color: #8a6a1a; }
-  .ov-empty {
-    padding: 20px 14px; color: var(--muted); font-style: italic; font-size: 12px;
-  }
-  /* Drop target highlight */
-  .ov-quadrant.drag-over {
-    outline: 2px dashed var(--gold);
-    outline-offset: -2px;
-    background: #f5f0e0;
-  }
-  .ov-drop-hint {
-    display: none; padding: 10px 14px; text-align: center;
-    font-size: 11px; color: var(--muted); font-style: italic;
-  }
+  .ov-empty { padding: 14px 14px; color: var(--muted); font-style: italic; font-size: 12px; }
+  .ov-quadrant.drag-over { outline: 2px dashed var(--gold); outline-offset: -2px; background: #f5f0e0; }
+  .ov-drop-hint { display: none; padding: 10px 14px; text-align: center; font-size: 11px; color: var(--muted); font-style: italic; }
   .ov-quadrant.drag-over .ov-drop-hint { display: block; }
 
   /* Category block */
   .cat-block { margin-bottom: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
-  .cat-head {
-    padding: 10px 16px; color: #fff; font-size: 11px; font-weight: 800;
-    letter-spacing: 2px; text-transform: uppercase;
-  }
+  .cat-head { padding: 10px 16px; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
   .cat-head[data-cat="Work"]                { background: #4A8FD4; }
   .cat-head[data-cat="Growth and Learning"] { background: #1A4A2A; }
   .cat-head[data-cat="Joyful Pursuits"]     { background: #C2A040; }
@@ -147,10 +97,7 @@
 
   /* Goal rows */
   .goal-list { background: var(--panel); }
-  .ag-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 16px; border-bottom: 1px solid var(--line);
-  }
+  .ag-row { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
   .ag-row:last-child { border-bottom: none; }
   .ag-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .ag-dot[data-status="not_started"] { background: #9ca3af; }
@@ -158,132 +105,62 @@
   .ag-dot[data-status="completed"]   { background: #1A4A2A; }
   .ag-dot[data-status="postponed"]   { background: #C2A040; }
   .ag-text { flex: 1; font-size: 14px; color: var(--ink); line-height: 1.4; }
-  .ag-text-input {
-    flex: 1; font-size: 14px; color: var(--ink); font-family: inherit;
-    border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px;
-    background: #fff; outline: none;
-  }
+  .ag-text-input { flex: 1; font-size: 14px; color: var(--ink); font-family: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: #fff; outline: none; display: none; }
   .ag-text-input:focus { border-color: var(--gold); }
+  .ag-empty-row { padding: 10px 16px; font-size: 13px; color: var(--muted); font-style: italic; }
 
   /* Status pill */
-  .ag-status {
-    padding: 4px 10px; border-radius: 20px; border: none; cursor: pointer;
-    font-size: 11px; font-weight: 700; font-family: inherit;
-    -webkit-appearance: none; appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='rgba(0,0,0,0.2)'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 7px center; padding-right: 20px;
-    display: none;
-  }
+  .ag-status { padding: 4px 10px; border-radius: 20px; border: none; cursor: pointer; font-size: 11px; font-weight: 700; font-family: inherit; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='rgba(0,0,0,0.2)'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 7px center; padding-right: 20px; display: none; }
   .ag-status[data-value="not_started"] { background: #e5e7eb; color: #374151; }
   .ag-status[data-value="in_progress"] { background: #CCE4E8; color: #196878; }
   .ag-status[data-value="completed"]   { background: #D0E8D4; color: #1A4A2A; }
   .ag-status[data-value="postponed"]   { background: #F0E8C8; color: #8a6a1a; }
-  .ag-status-label {
-    font-size: 11px; font-weight: 700; color: var(--muted);
-    padding: 4px 10px; border-radius: 20px; white-space: nowrap;
-  }
+  .ag-status-label { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
   .ag-status-label[data-status="not_started"] { background: #e5e7eb; color: #374151; }
   .ag-status-label[data-status="in_progress"] { background: #CCE4E8; color: #196878; }
   .ag-status-label[data-status="completed"]   { background: #D0E8D4; color: #1A4A2A; }
   .ag-status-label[data-status="postponed"]   { background: #F0E8C8; color: #8a6a1a; }
 
   /* Move to quarter */
-  .ag-move {
-    display: none; font-size: 11px; font-family: inherit; padding: 4px 8px;
-    border-radius: 6px; border: 1px solid var(--line); background: var(--bg);
-    color: var(--muted); cursor: pointer;
-  }
+  .ag-move { display: none; font-size: 11px; font-family: inherit; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer; }
   .ag-move:focus { outline: none; border-color: var(--teal); }
 
   /* Remove btn */
-  .ag-remove {
-    background: none; border: none; cursor: pointer; color: var(--muted);
-    font-size: 16px; line-height: 1; padding: 0 4px; display: none;
-  }
+  .ag-remove { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 4px; display: none; }
   .ag-remove:hover { color: var(--red); }
 
   /* Add goal row */
-  .ag-add-row {
-    display: none; align-items: center; gap: 8px;
-    padding: 8px 16px; background: var(--bg);
-  }
-  .ag-add-input {
-    flex: 1; font-size: 13px; font-family: inherit; padding: 6px 10px;
-    border: 1px dashed var(--line); border-radius: 6px; background: var(--panel);
-    outline: none; color: var(--ink);
-  }
+  .ag-add-row { display: none; align-items: center; gap: 8px; padding: 8px 16px; background: var(--bg); }
+  .ag-add-input { flex: 1; font-size: 13px; font-family: inherit; padding: 6px 10px; border: 1px dashed var(--line); border-radius: 6px; background: var(--panel); outline: none; color: var(--ink); }
   .ag-add-input:focus { border-color: var(--gold); }
-  .ag-add-btn {
-    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--gold);
-    background: transparent; color: var(--gold); font-size: 12px; font-weight: 700;
-    cursor: pointer; font-family: inherit;
-  }
+  .ag-add-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--gold); background: transparent; color: var(--gold); font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
   .ag-add-btn:hover { background: var(--gold); color: #fff; }
 
   /* Edit mode toggles */
-  .form-editing .ag-status { display: inline-block; }
+  .form-editing .ag-status       { display: inline-block; }
   .form-editing .ag-status-label { display: none; }
-  .form-editing .ag-remove { display: inline-block; }
-  .form-editing .ag-add-row { display: flex; }
-  .form-editing .ag-dot { display: none; }
-  .form-editing .ag-text { display: none; }
-  .form-editing .ag-text-input { display: block; }
-  .form-editing .ag-move { display: inline-block; }
-
-  /* When NOT editing */
-  .ag-text-input { display: none; }
-
-  /* Empty quarter */
-  .q-empty {
-    background: var(--panel); border: 1px dashed var(--line); border-radius: 12px;
-    padding: 40px 20px; text-align: center; color: var(--muted); font-style: italic;
-    margin-bottom: 14px;
-  }
-  .q-add-cat { display: none; margin-bottom: 14px; }
-  .form-editing .q-add-cat { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .q-add-cat label { font-size: 12px; color: var(--muted); font-weight: 600; }
-  .q-add-cat select {
-    padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line);
-    font-family: inherit; font-size: 13px; background: var(--panel); color: var(--ink);
-  }
-  .q-add-cat-btn {
-    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--teal);
-    background: transparent; color: var(--teal); font-size: 12px; font-weight: 700;
-    cursor: pointer; font-family: inherit;
-  }
-  .q-add-cat-btn:hover { background: var(--teal); color: #fff; }
+  .form-editing .ag-remove       { display: inline-block; }
+  .form-editing .ag-add-row      { display: flex; }
+  .form-editing .ag-dot          { display: none; }
+  .form-editing .ag-text         { display: none; }
+  .form-editing .ag-text-input   { display: block; }
+  .form-editing .ag-move         { display: inline-block; }
+  .form-editing .ag-empty-row    { display: none; }
 
   /* Save row */
-  .save-row {
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 10px; margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--line);
-  }
+  .save-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
   .saved-info { font-size: 12px; color: var(--muted); margin-right: auto; }
-  .btn-primary {
-    padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 700;
-    cursor: pointer; font-family: inherit; background: var(--gold); border: none; color: #fff;
-  }
+  .btn-primary { padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; background: var(--gold); border: none; color: #fff; }
   .btn-primary:hover { opacity: 0.9; }
-  .btn-secondary {
-    padding: 10px 22px; border-radius: 10px; font-size: 14px; font-weight: 700;
-    cursor: pointer; font-family: inherit; background: transparent;
-    border: 2px solid var(--teal); color: var(--teal);
-  }
+  .btn-secondary { padding: 10px 22px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; background: transparent; border: 2px solid var(--teal); color: var(--teal); }
   .btn-secondary:hover { background: var(--teal-soft); }
 
-  .banner {
-    padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;
-    font-size: 13px; font-weight: 600; display: none;
-  }
+  .banner { padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 13px; font-weight: 600; display: none; }
   .banner.show { display: block; }
   .banner.success { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
   .banner.warn { background: #fff5d6; color: #8a6a1a; border: 1px solid var(--gold); }
 
-  .footer {
-    display: flex; justify-content: space-between; font-size: 11px; color: var(--muted);
-    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 40px;
-    padding-top: 16px; border-top: 1px solid var(--line);
-  }
+  .footer { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); }
 
   @media (max-width: 680px) {
     .wrap { padding: 16px; }
@@ -307,14 +184,19 @@
   <div class="header">
     <div class="brand">
       <h1>infinite <span>YOU</span></h1>
-      <div class="sub">Annual Goals · 2026 · Jardine Gerodias</div>
+      <div class="sub" id="headerSub">Annual Goals · 2026 · Jardine Gerodias</div>
     </div>
   </div>
 
   <div class="banner" id="banner"></div>
 
+  <!-- Year selector -->
+  <div class="year-selector" id="yearSelector">
+    <span class="year-label">Year</span>
+  </div>
+
   <!-- Quarter tabs -->
-  <div class="q-tabs">
+  <div class="q-tabs" id="qTabs">
     <button class="q-tab" data-q="overview">Overview</button>
     <button class="q-tab" data-q="Q1">1st Quarter</button>
     <button class="q-tab active" data-q="Q2">2nd Quarter</button>
@@ -350,156 +232,192 @@ const SUPABASE_URL = 'https://prqpnfrfwquncyfysvks.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_zXQdgBgA0DXTf7julXpQkw_A4Gd-57l';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const LOCAL_KEY = 'infiniteYou_annualGoals_2026';
-
-const CATS = ['Work', 'Growth and Learning', 'Joyful Pursuits', 'Health', 'Family'];
-const CAT_COLORS = {
-  'Work':                '#4A8FD4',
-  'Growth and Learning': '#1A4A2A',
-  'Joyful Pursuits':     '#C2A040',
-  'Health':              '#8C1A2C',
-  'Family':              '#196878',
-};
-const CAT_CLASS = {
-  'Work': 'cat-Work', 'Growth and Learning': 'cat-Growth',
-  'Joyful Pursuits': 'cat-Joyful', 'Health': 'cat-Health', 'Family': 'cat-Family',
-};
-const Q_LABELS = { Q1: '1st Quarter', Q2: '2nd Quarter', Q3: '3rd Quarter', Q4: '4th Quarter' };
-
+const YEARS = [2026,2027,2028,2029,2030,2031,2032,2033,2034,2035];
+const CATS  = ['Work','Growth and Learning','Joyful Pursuits','Health','Family'];
+const CAT_CLASS = { 'Work':'cat-Work','Growth and Learning':'cat-Growth','Joyful Pursuits':'cat-Joyful','Health':'cat-Health','Family':'cat-Family' };
 const STATUS_OPTIONS = [
-  { value: 'not_started', label: 'not started' },
-  { value: 'in_progress', label: 'in progress' },
-  { value: 'completed',   label: 'completed' },
-  { value: 'postponed',   label: 'postponed' },
+  { value:'not_started', label:'not started' },
+  { value:'in_progress', label:'in progress' },
+  { value:'completed',   label:'completed'   },
+  { value:'postponed',   label:'postponed'   },
 ];
 
-const DEFAULTS = {
-  Q1: {},
-  Q2: {
-    'Work': [
-      { text: 'App Launch',                          status: 'not_started' },
-      { text: 'CAIO Role',                           status: 'not_started' },
-      { text: 'Co-op Initiative',                    status: 'not_started' },
-      { text: 'Computer Cleanup / Move to Expedise', status: 'not_started' },
-    ],
-    'Growth and Learning': [
-      { text: 'Claude Masterclass', status: 'not_started' },
-      { text: 'Vinh Giang',         status: 'not_started' },
-    ],
-    'Joyful Pursuits': [
-      { text: 'Start Drums',          status: 'not_started' },
-      { text: 'Going Back to Diving', status: 'not_started' },
-    ],
-    'Family': [
-      { text: 'Family Values',           status: 'not_started' },
-      { text: 'Weekly Date with Gen',    status: 'not_started' },
-      { text: 'Weekly Movies with Kids', status: 'not_started' },
-    ],
-    'Health': [],
-  },
-  Q3: {
-    'Work': [
-      { text: 'PR / Thought Leadership Development', status: 'not_started' },
-    ],
-    'Growth and Learning': [
-      { text: 'Naval Ravikant',               status: 'not_started' },
-      { text: 'Deeper Focus on Communication',status: 'not_started' },
-    ],
-    'Joyful Pursuits': [
-      { text: 'Dancing',          status: 'not_started' },
-      { text: 'Return to Diving', status: 'not_started' },
-    ],
-    'Family': [
-      { text: 'Garage Sale',          status: 'not_started' },
-      { text: 'Minimize Possessions', status: 'not_started' },
-    ],
-    'Health': [
-      { text: 'Kaizen S11',  status: 'not_started' },
-      { text: 'Cold Plunge', status: 'not_started' },
-    ],
-  },
-  Q4: {},
-};
+// Returns a blank quarter (all 5 cats, empty arrays)
+function blankQ() {
+  return Object.fromEntries(CATS.map(c => [c, []]));
+}
 
+// Pre-populated defaults for 2026
+function getDefaults(year) {
+  if (year === 2026) {
+    return {
+      Q1: blankQ(),
+      Q2: {
+        'Work': [
+          { text:'App Launch',                          status:'not_started' },
+          { text:'CAIO Role',                           status:'not_started' },
+          { text:'Co-op Initiative',                    status:'not_started' },
+          { text:'Computer Cleanup / Move to Expedise', status:'not_started' },
+        ],
+        'Growth and Learning': [
+          { text:'Claude Masterclass', status:'not_started' },
+          { text:'Vinh Giang',         status:'not_started' },
+        ],
+        'Joyful Pursuits': [
+          { text:'Start Drums',          status:'not_started' },
+          { text:'Going Back to Diving', status:'not_started' },
+        ],
+        'Health': [],
+        'Family': [
+          { text:'Family Values',           status:'not_started' },
+          { text:'Weekly Date with Gen',    status:'not_started' },
+          { text:'Weekly Movies with Kids', status:'not_started' },
+        ],
+      },
+      Q3: {
+        'Work': [
+          { text:'PR / Thought Leadership Development', status:'not_started' },
+        ],
+        'Growth and Learning': [
+          { text:'Naval Ravikant',                status:'not_started' },
+          { text:'Deeper Focus on Communication', status:'not_started' },
+        ],
+        'Joyful Pursuits': [
+          { text:'Dancing',          status:'not_started' },
+          { text:'Return to Diving', status:'not_started' },
+        ],
+        'Health': [
+          { text:'Kaizen S11',  status:'not_started' },
+          { text:'Cold Plunge', status:'not_started' },
+        ],
+        'Family': [
+          { text:'Garage Sale',           status:'not_started' },
+          { text:'Minimize Possessions',  status:'not_started' },
+        ],
+      },
+      Q4: blankQ(),
+    };
+  }
+  return { Q1: blankQ(), Q2: blankQ(), Q3: blankQ(), Q4: blankQ() };
+}
+
+// Ensure every quarter has all 5 cats (for old saved data)
+function ensureAllCats(data) {
+  ['Q1','Q2','Q3','Q4'].forEach(q => {
+    if (!data[q]) data[q] = blankQ();
+    CATS.forEach(c => { if (!data[q][c]) data[q][c] = []; });
+  });
+  return data;
+}
+
+// ---------- State ----------
+let currentYear = 2026;
 let goals = {};
 let editMode = false;
 let activeQ = 'Q2';
 
+function localKey(year) { return `infiniteYou_annualGoals_${year}`; }
+
 // ---------- Load / Save ----------
-function loadGoals() {
-  const saved = localStorage.getItem(LOCAL_KEY);
+function loadGoals(year) {
+  const saved = localStorage.getItem(localKey(year));
   if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      // Make sure Q1 exists (for older saved data)
-      if (!parsed.Q1) parsed.Q1 = {};
-      goals = parsed;
-      return;
-    } catch {}
+    try { goals = ensureAllCats(JSON.parse(saved)); return; } catch {}
   }
-  goals = JSON.parse(JSON.stringify(DEFAULTS));
+  goals = ensureAllCats(getDefaults(year));
 }
 
 function persistGoals() {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(goals));
+  localStorage.setItem(localKey(currentYear), JSON.stringify(goals));
   try {
     sb.from('annual_goals')
-      .upsert({ year: '2026', data: goals, updated_at: new Date().toISOString() }, { onConflict: 'year' })
+      .upsert({ year: String(currentYear), data: goals, updated_at: new Date().toISOString() }, { onConflict: 'year' })
       .then(() => {});
   } catch {}
 }
 
-async function tryLoadFromSupabase() {
+async function tryLoadFromSupabase(year) {
   try {
-    const { data } = await sb.from('annual_goals').select('data').eq('year', '2026').maybeSingle();
-    if (data && data.data) {
-      goals = data.data;
-      if (!goals.Q1) goals.Q1 = {};
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(goals));
+    const { data } = await sb.from('annual_goals').select('data').eq('year', String(year)).maybeSingle();
+    if (data?.data) {
+      goals = ensureAllCats(data.data);
+      localStorage.setItem(localKey(year), JSON.stringify(goals));
       renderAll();
     }
   } catch {}
 }
 
+// ---------- Year label helpers ----------
+const Q_NAMES = { Q1:'1st Quarter', Q2:'2nd Quarter', Q3:'3rd Quarter', Q4:'4th Quarter' };
+function qLabel(q) { return `${Q_NAMES[q]} ${currentYear}`; }
+
+// ---------- Year selector ----------
+function renderYearSelector() {
+  const sel = document.getElementById('yearSelector');
+  sel.innerHTML = '<span class="year-label">Year</span>' +
+    YEARS.map(y => `<button class="year-btn${y===currentYear?' active':''}" data-year="${y}">${y}</button>`).join('');
+}
+
+function switchYear(year) {
+  if (editMode) { collectEdits(); persistGoals(); }
+  currentYear = year;
+  editMode = false;
+  document.getElementById('editBtn').style.display = '';
+  document.getElementById('saveBtn').style.display = 'none';
+  loadGoals(year);
+  renderYearSelector();
+  updateQTabs();
+  renderAll();
+  document.getElementById('headerSub').textContent = `Annual Goals · ${year} · Jardine Gerodias`;
+  document.getElementById('savedInfo').textContent = 'Not saved yet';
+  tryLoadFromSupabase(year);
+}
+
+// Update quarter tab labels to include current year
+function updateQTabs() {
+  document.querySelectorAll('.q-tab[data-q]').forEach(btn => {
+    const q = btn.dataset.q;
+    if (q === 'overview') { btn.textContent = 'Overview'; return; }
+    btn.textContent = qLabel(q);
+  });
+}
+
 // ---------- Render: Overview ----------
 function renderOverview() {
   const grid = document.getElementById('ovGrid');
-  const qs = ['Q1', 'Q2', 'Q3', 'Q4'];
+  const qs = ['Q1','Q2','Q3','Q4'];
   grid.innerHTML = qs.map(q => {
     const qGoals = goals[q] || {};
-    const cats = Object.keys(qGoals).filter(c => qGoals[c] && qGoals[c].length > 0);
+    const cats = CATS.filter(c => qGoals[c]?.length > 0);
     let inner = '';
     if (cats.length === 0) {
-      inner = `<div class="ov-empty">Drop goals here or add them in edit mode</div>`;
+      inner = `<div class="ov-empty">No goals yet — drop one here or edit this quarter.</div>`;
     } else {
       cats.forEach(cat => {
-        inner += `<div class="ov-cat-label ${CAT_CLASS[cat] || ''}">${cat}</div>`;
-        (qGoals[cat] || []).forEach((item, i) => {
-          inner += `<div class="ov-goal-row" draggable="true"
-              data-q="${q}" data-cat="${cat}" data-idx="${i}">
+        inner += `<div class="ov-cat-label ${CAT_CLASS[cat]||''}">${cat}</div>`;
+        (qGoals[cat]||[]).forEach((item,i) => {
+          inner += `<div class="ov-goal-row" draggable="true" data-q="${q}" data-cat="${cat}" data-idx="${i}">
             <span class="ov-drag-handle">⠿</span>
             <span class="ov-dot" data-s="${item.status}"></span>
             <span class="ov-text">${item.text}</span>
-            <span class="ov-pill ${item.status}">${STATUS_OPTIONS.find(o=>o.value===item.status)?.label || item.status}</span>
+            <span class="ov-pill ${item.status}">${STATUS_OPTIONS.find(o=>o.value===item.status)?.label||item.status}</span>
           </div>`;
         });
       });
     }
     return `<div class="ov-quadrant" data-drop-q="${q}">
-      <div class="ov-q-head ${q}">${Q_LABELS[q]}</div>
+      <div class="ov-q-head ${q}">${qLabel(q)}</div>
       ${inner}
-      <div class="ov-drop-hint">Drop here to move to ${Q_LABELS[q]}</div>
+      <div class="ov-drop-hint">Drop here → ${qLabel(q)}</div>
     </div>`;
   }).join('');
-
   bindOverviewDrag();
 }
 
-// ---------- Overview drag-and-drop ----------
-let dragPayload = null; // { q, cat, idx }
+// ---------- Drag-and-drop ----------
+let dragPayload = null;
 
 function bindOverviewDrag() {
-  // Draggable rows
   document.querySelectorAll('.ov-goal-row[draggable]').forEach(row => {
     row.addEventListener('dragstart', e => {
       dragPayload = { q: row.dataset.q, cat: row.dataset.cat, idx: parseInt(row.dataset.idx) };
@@ -512,8 +430,6 @@ function bindOverviewDrag() {
       document.querySelectorAll('.ov-quadrant').forEach(q => q.classList.remove('drag-over'));
     });
   });
-
-  // Drop targets (quadrants)
   document.querySelectorAll('.ov-quadrant[data-drop-q]').forEach(quad => {
     quad.addEventListener('dragover', e => {
       e.preventDefault();
@@ -522,7 +438,6 @@ function bindOverviewDrag() {
       quad.classList.add('drag-over');
     });
     quad.addEventListener('dragleave', e => {
-      // Only remove if leaving the quadrant entirely (not just child elements)
       if (!quad.contains(e.relatedTarget)) quad.classList.remove('drag-over');
     });
     quad.addEventListener('drop', e => {
@@ -534,13 +449,12 @@ function bindOverviewDrag() {
       if (!goals[fromQ]?.[cat]) return;
       const item = goals[fromQ][cat].splice(idx, 1)[0];
       if (!item) return;
-      if (goals[fromQ][cat].length === 0) delete goals[fromQ][cat];
-      if (!goals[toQ]) goals[toQ] = {};
+      if (!goals[toQ]) goals[toQ] = blankQ();
       if (!goals[toQ][cat]) goals[toQ][cat] = [];
       goals[toQ][cat].push(item);
       persistGoals();
       renderAll();
-      showBanner(`Moved "${item.text}" to ${Q_LABELS[toQ]}`, 'success');
+      showBanner(`Moved "${item.text}" to ${qLabel(toQ)}`, 'success');
       dragPayload = null;
     });
   });
@@ -551,56 +465,40 @@ function renderQuarter(q) {
   const panel = document.getElementById(`panel-${q}`);
   if (!panel) return;
   const qGoals = goals[q] || {};
-  const cats = Object.keys(qGoals).filter(c => qGoals[c] && qGoals[c].length > 0);
-
-  let html = '';
-
-  if (cats.length === 0 && !editMode) {
-    html = `<div class="q-empty">An open horizon — no goals defined yet.<br><small>Click <strong>Edit</strong> to add your first goal.</small></div>`;
-  }
-
-  // Add category picker (edit mode)
-  const availableCats = CATS.filter(c => !qGoals[c] || qGoals[c].length === 0);
-  html += `<div class="q-add-cat">
-    <label>Add category:</label>
-    <select id="newCatSelect_${q}">
-      ${availableCats.map(c => `<option value="${c}">${c}</option>`).join('')}
-    </select>
-    <button class="q-add-cat-btn" data-q="${q}">+ Add</button>
-  </div>`;
-
-  // Other quarters for the "move to" dropdown
   const otherQs = ['Q1','Q2','Q3','Q4'].filter(x => x !== q);
+  const opts = STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
 
-  cats.forEach(cat => {
+  // Always render all 5 fixed categories
+  const html = CATS.map(cat => {
     const items = qGoals[cat] || [];
-    const opts = STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
-    const moveOpts = otherQs.map(x => `<option value="${x}">${Q_LABELS[x]}</option>`).join('');
-    html += `<div class="cat-block" data-q="${q}" data-cat="${cat}">
+    const moveOpts = otherQs.map(x => `<option value="${x}">${qLabel(x)}</option>`).join('');
+    const rows = items.map((item,i) => `
+      <div class="ag-row" data-idx="${i}">
+        <span class="ag-dot" data-status="${item.status}"></span>
+        <span class="ag-text">${item.text}</span>
+        <input class="ag-text-input" value="${item.text}" data-q="${q}" data-cat="${cat}" data-idx="${i}" />
+        <span class="ag-status-label" data-status="${item.status}">${STATUS_OPTIONS.find(o=>o.value===item.status)?.label||item.status}</span>
+        <select class="ag-status" data-value="${item.status}" data-q="${q}" data-cat="${cat}" data-idx="${i}">
+          ${opts.replace(`value="${item.status}"`,`value="${item.status}" selected`)}
+        </select>
+        <select class="ag-move" data-q="${q}" data-cat="${cat}" data-idx="${i}" title="Move to quarter">
+          <option value="">Move to…</option>${moveOpts}
+        </select>
+        <button class="ag-remove" data-q="${q}" data-cat="${cat}" data-idx="${i}" title="Remove">×</button>
+      </div>`).join('');
+    const emptyRow = items.length === 0
+      ? `<div class="ag-empty-row">No goals yet</div>` : '';
+    return `<div class="cat-block" data-q="${q}" data-cat="${cat}">
       <div class="cat-head" data-cat="${cat}">${cat}</div>
       <div class="goal-list">
-        ${items.map((item, i) => `
-          <div class="ag-row" data-idx="${i}">
-            <span class="ag-dot" data-status="${item.status}"></span>
-            <span class="ag-text">${item.text}</span>
-            <input class="ag-text-input" value="${item.text}" data-q="${q}" data-cat="${cat}" data-idx="${i}" />
-            <span class="ag-status-label" data-status="${item.status}">${STATUS_OPTIONS.find(o=>o.value===item.status)?.label || item.status}</span>
-            <select class="ag-status" data-value="${item.status}" data-q="${q}" data-cat="${cat}" data-idx="${i}">
-              ${opts.replace(`value="${item.status}"`, `value="${item.status}" selected`)}
-            </select>
-            <select class="ag-move" data-q="${q}" data-cat="${cat}" data-idx="${i}" title="Move to quarter">
-              <option value="">Move to…</option>
-              ${moveOpts}
-            </select>
-            <button class="ag-remove" data-q="${q}" data-cat="${cat}" data-idx="${i}" title="Remove">×</button>
-          </div>`).join('')}
+        ${rows}${emptyRow}
         <div class="ag-add-row">
           <input class="ag-add-input" placeholder="Add a goal…" data-q="${q}" data-cat="${cat}" />
           <button class="ag-add-btn" data-q="${q}" data-cat="${cat}">+ Add</button>
         </div>
       </div>
     </div>`;
-  });
+  }).join('');
 
   panel.innerHTML = html;
   if (editMode) panel.classList.add('form-editing');
@@ -619,7 +517,6 @@ function enterEditMode() {
   document.getElementById('saveBtn').style.display = '';
   document.querySelectorAll('.q-panel').forEach(p => p.classList.add('form-editing'));
 }
-
 function enterViewMode() {
   editMode = false;
   document.getElementById('editBtn').style.display = '';
@@ -633,23 +530,38 @@ function showBanner(msg, type) {
   setTimeout(() => b.className = 'banner', 3000);
 }
 
-// ---------- Move goal to another quarter ----------
+// ---------- Move goal ----------
 function moveGoal(fromQ, cat, idx, toQ) {
   collectEdits();
-  if (!goals[fromQ]?.[cat]) return;
-  const item = goals[fromQ][cat].splice(parseInt(idx), 1)[0];
+  const item = goals[fromQ]?.[cat]?.splice(parseInt(idx), 1)[0];
   if (!item) return;
-  if (goals[fromQ][cat].length === 0) delete goals[fromQ][cat];
-  if (!goals[toQ]) goals[toQ] = {};
+  if (!goals[toQ]) goals[toQ] = blankQ();
   if (!goals[toQ][cat]) goals[toQ][cat] = [];
   goals[toQ][cat].push(item);
   renderAll();
-  showBanner(`Moved "${item.text}" to ${Q_LABELS[toQ]}`, 'success');
+  showBanner(`Moved "${item.text}" to ${qLabel(toQ)}`, 'success');
+}
+
+// ---------- Collect edits ----------
+function collectEdits() {
+  document.querySelectorAll('.ag-text-input').forEach(input => {
+    const { q, cat, idx } = input.dataset;
+    if (goals[q]?.[cat]?.[parseInt(idx)] !== undefined)
+      goals[q][cat][parseInt(idx)].text = input.value.trim();
+  });
+  document.querySelectorAll('.ag-status').forEach(sel => {
+    const { q, cat, idx } = sel.dataset;
+    if (goals[q]?.[cat]?.[parseInt(idx)] !== undefined)
+      goals[q][cat][parseInt(idx)].status = sel.value;
+  });
 }
 
 // ---------- Events ----------
 document.addEventListener('click', e => {
-
+  // Year button
+  if (e.target.classList.contains('year-btn')) {
+    switchYear(parseInt(e.target.dataset.year)); return;
+  }
   // Quarter tab
   if (e.target.classList.contains('q-tab')) {
     document.querySelectorAll('.q-tab').forEach(t => t.classList.remove('active'));
@@ -659,107 +571,65 @@ document.addEventListener('click', e => {
     document.getElementById(`panel-${activeQ}`).classList.add('active');
     return;
   }
-
   if (e.target.id === 'editBtn') { enterEditMode(); return; }
-
   if (e.target.id === 'saveBtn') {
-    collectEdits();
-    persistGoals();
+    collectEdits(); persistGoals();
     document.getElementById('savedInfo').textContent = `Saved ${new Date().toLocaleString()}`;
     showBanner('Goals saved.', 'success');
-    renderAll();
-    enterViewMode();
-    return;
+    renderAll(); enterViewMode(); return;
   }
-
   // Add goal
   if (e.target.classList.contains('ag-add-btn')) {
-    const q = e.target.dataset.q, cat = e.target.dataset.cat;
+    const { q, cat } = e.target.dataset;
     const input = document.querySelector(`.ag-add-input[data-q="${q}"][data-cat="${cat}"]`);
     const text = input?.value.trim();
     if (!text) return;
-    if (!goals[q]) goals[q] = {};
     if (!goals[q][cat]) goals[q][cat] = [];
-    goals[q][cat].push({ text, status: 'not_started' });
-    renderAll();
-    return;
+    goals[q][cat].push({ text, status:'not_started' });
+    renderAll(); return;
   }
-
   // Remove goal
   if (e.target.classList.contains('ag-remove')) {
     const { q, cat, idx } = e.target.dataset;
     goals[q][cat].splice(parseInt(idx), 1);
-    if (goals[q][cat].length === 0) delete goals[q][cat];
-    renderAll();
-    return;
-  }
-
-  // Add category
-  if (e.target.classList.contains('q-add-cat-btn')) {
-    const q = e.target.dataset.q;
-    const sel = document.getElementById(`newCatSelect_${q}`);
-    const cat = sel?.value;
-    if (!cat) return;
-    if (!goals[q]) goals[q] = {};
-    if (!goals[q][cat]) goals[q][cat] = [];
-    renderAll();
-    return;
+    renderAll(); return;
   }
 });
 
-// Enter key on add-input
+// Enter on add-input
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.classList.contains('ag-add-input')) {
-    const q = e.target.dataset.q, cat = e.target.dataset.cat;
+    const { q, cat } = e.target.dataset;
     const text = e.target.value.trim();
     if (!text) return;
-    if (!goals[q]) goals[q] = {};
     if (!goals[q][cat]) goals[q][cat] = [];
-    goals[q][cat].push({ text, status: 'not_started' });
+    goals[q][cat].push({ text, status:'not_started' });
     renderAll();
   }
 });
 
-// Status change & move to quarter
+// Status change + move
 document.addEventListener('change', e => {
   if (e.target.classList.contains('ag-status')) {
     const { q, cat, idx } = e.target.dataset;
     e.target.dataset.value = e.target.value;
-    if (goals[q]?.[cat]?.[parseInt(idx)]) {
-      goals[q][cat][parseInt(idx)].status = e.target.value;
-    }
+    if (goals[q]?.[cat]?.[parseInt(idx)]) goals[q][cat][parseInt(idx)].status = e.target.value;
     return;
   }
   if (e.target.classList.contains('ag-move')) {
     const { q, cat, idx } = e.target.dataset;
     const toQ = e.target.value;
     if (!toQ) return;
-    moveGoal(q, cat, parseInt(idx), toQ);
-    return;
+    moveGoal(q, cat, parseInt(idx), toQ); return;
   }
 });
 
-// Collect edits before saving or moving
-function collectEdits() {
-  document.querySelectorAll('.ag-text-input').forEach(input => {
-    const { q, cat, idx } = input.dataset;
-    const text = input.value.trim();
-    if (goals[q]?.[cat]?.[parseInt(idx)] !== undefined) {
-      goals[q][cat][parseInt(idx)].text = text;
-    }
-  });
-  document.querySelectorAll('.ag-status').forEach(sel => {
-    const { q, cat, idx } = sel.dataset;
-    if (goals[q]?.[cat]?.[parseInt(idx)] !== undefined) {
-      goals[q][cat][parseInt(idx)].status = sel.value;
-    }
-  });
-}
-
 // ---------- Init ----------
-loadGoals();
+renderYearSelector();
+loadGoals(currentYear);
+updateQTabs();
 renderAll();
-tryLoadFromSupabase();
+tryLoadFromSupabase(currentYear);
 </script>
 </body>
 </html>
