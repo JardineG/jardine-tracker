@@ -2213,29 +2213,71 @@ const STATUS_OPTIONS_WP = [
 ];
 
 let wpGoals = []; // cached goal list for this week
-let wpWeekEnding = ''; // the week_ending key for the loaded priorities
+let wpWeekEnding = '';        // last Sunday — where next_priorities lives (source of truth)
+let wpStatusWeekEnding = '';  // this coming Sunday — where we save status updates
 
-function sundayOfDate(d) {
-  const day = new Date(d);
-  day.setDate(day.getDate() - day.getDay());
-  return day.toISOString().slice(0, 10);
+// Last Sunday (Mon–Sun week that just ended, or today if Sunday)
+function lastSundayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay()); // subtract getDay(): Mon→1, Sun→0
+  return d.toISOString().slice(0, 10);
 }
+
+// This coming Sunday (end of the current Mon–Sun week)
+function thisSundayStr() {
+  const d = new Date();
+  const daysLeft = (7 - d.getDay()) % 7; // 0 if already Sunday, 6 if Monday, etc.
+  d.setDate(d.getDate() + daysLeft);
+  return d.toISOString().slice(0, 10);
+}
+
+const WP_CATS = ['Work','Growth and Learning','Joyful Pursuits','Health','Family'];
 
 async function loadWeeklyPriorities() {
   const list = document.getElementById('wpList');
   if (!list) return;
-  wpWeekEnding = sundayOfDate(new Date());
+
+  wpWeekEnding       = lastSundayStr();  // review from last week
+  wpStatusWeekEnding = thisSundayStr();  // current week (for saving status)
+
   try {
-    const { data, error } = await sb
+    // 1. Check if this week already has status-tracked goals saved
+    const { data: curr } = await sb
       .from('weekly_reviews')
       .select('goals_last_week')
+      .eq('week_ending', wpStatusWeekEnding)
+      .maybeSingle();
+
+    if (curr?.goals_last_week) {
+      try { wpGoals = JSON.parse(curr.goals_last_week); } catch { wpGoals = []; }
+      if (wpGoals.length > 0) { renderWpList(); return; }
+    }
+
+    // 2. Fall back: load next_priorities from last week's review
+    const { data, error } = await sb
+      .from('weekly_reviews')
+      .select('next_priorities')
       .eq('week_ending', wpWeekEnding)
       .maybeSingle();
-    if (error || !data || !data.goals_last_week) {
+
+    if (error || !data || !data.next_priorities) {
       list.innerHTML = '<div class="wp-empty">No priorities set for this week yet — <a href="weekly-review.html" style="color:var(--gold);font-weight:700;">go to Weekly Review →</a></div>';
       return;
     }
-    try { wpGoals = JSON.parse(data.goals_last_week); } catch { wpGoals = []; }
+
+    // Parse matrix format: { "Work": ["item1", ...], "Health": [...], ... }
+    wpGoals = [];
+    try {
+      const matrix = JSON.parse(data.next_priorities);
+      if (matrix && typeof matrix === 'object' && !Array.isArray(matrix)) {
+        WP_CATS.forEach(cat => {
+          (matrix[cat] || []).filter(Boolean).forEach(item => {
+            wpGoals.push({ goal: item, category: cat, status: 'not_started' });
+          });
+        });
+      }
+    } catch { wpGoals = []; }
+
     renderWpList();
   } catch (e) {
     list.innerHTML = '<div class="wp-empty">Could not load priorities.</div>';
@@ -2268,11 +2310,13 @@ function renderWpList() {
 async function saveWpStatus(idx, newStatus) {
   if (!wpGoals[idx]) return;
   wpGoals[idx].status = newStatus;
-  // Save updated goals back to Supabase
+  // Save to the CURRENT week's record (upsert in case it doesn't exist yet)
   try {
     await sb.from('weekly_reviews')
-      .update({ goals_last_week: JSON.stringify(wpGoals), updated_at: new Date().toISOString() })
-      .eq('week_ending', wpWeekEnding);
+      .upsert(
+        { week_ending: wpStatusWeekEnding, goals_last_week: JSON.stringify(wpGoals), updated_at: new Date().toISOString() },
+        { onConflict: 'week_ending' }
+      );
   } catch (e) { /* fail silently */ }
 }
 
