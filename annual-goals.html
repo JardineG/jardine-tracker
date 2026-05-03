@@ -25,7 +25,7 @@
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-size: 14px; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 24px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px; }
 
   .top-nav {
     display: flex; gap: 4px; margin-bottom: 18px;
@@ -62,6 +62,59 @@
   .q-panel { display: none; }
   .q-panel.active { display: block; }
 
+  /* ── Overview grid ── */
+  .ov-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .ov-quadrant {
+    background: var(--panel);
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .ov-q-head {
+    padding: 10px 16px;
+    color: #fff;
+    font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .ov-q-head.Q1 { background: #4A8FD4; }
+  .ov-q-head.Q2 { background: var(--gold); }
+  .ov-q-head.Q3 { background: var(--teal); }
+  .ov-q-head.Q4 { background: var(--green); }
+  .ov-cat-label {
+    font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #fff; padding: 4px 14px 3px;
+  }
+  .ov-cat-label.cat-Work               { background: #4A8FD4; }
+  .ov-cat-label.cat-Growth             { background: #1A4A2A; }
+  .ov-cat-label.cat-Joyful             { background: #C2A040; }
+  .ov-cat-label.cat-Health             { background: #8C1A2C; }
+  .ov-cat-label.cat-Family             { background: #196878; }
+  .ov-goal-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 13px;
+  }
+  .ov-goal-row:last-child { border-bottom: none; }
+  .ov-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .ov-dot[data-s="not_started"] { background: #9ca3af; }
+  .ov-dot[data-s="in_progress"] { background: #4A8FD4; }
+  .ov-dot[data-s="completed"]   { background: #1A4A2A; }
+  .ov-dot[data-s="postponed"]   { background: #C2A040; }
+  .ov-text { flex: 1; color: var(--ink); line-height: 1.4; }
+  .ov-pill {
+    font-size: 10px; font-weight: 700; border-radius: 20px; padding: 2px 8px; white-space: nowrap;
+  }
+  .ov-pill.not_started { background: #e5e7eb; color: #374151; }
+  .ov-pill.in_progress { background: #CCE4E8; color: #196878; }
+  .ov-pill.completed   { background: #D0E8D4; color: #1A4A2A; }
+  .ov-pill.postponed   { background: #F0E8C8; color: #8a6a1a; }
+  .ov-empty {
+    padding: 20px 14px; color: var(--muted); font-style: italic; font-size: 12px;
+  }
+
   /* Category block */
   .cat-block { margin-bottom: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
   .cat-head {
@@ -77,7 +130,7 @@
   /* Goal rows */
   .goal-list { background: var(--panel); }
   .ag-row {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 8px;
     padding: 10px 16px; border-bottom: 1px solid var(--line);
   }
   .ag-row:last-child { border-bottom: none; }
@@ -101,7 +154,7 @@
     -webkit-appearance: none; appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='rgba(0,0,0,0.2)'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 7px center; padding-right: 20px;
-    display: none; /* only in edit mode */
+    display: none;
   }
   .ag-status[data-value="not_started"] { background: #e5e7eb; color: #374151; }
   .ag-status[data-value="in_progress"] { background: #CCE4E8; color: #196878; }
@@ -115,6 +168,14 @@
   .ag-status-label[data-status="in_progress"] { background: #CCE4E8; color: #196878; }
   .ag-status-label[data-status="completed"]   { background: #D0E8D4; color: #1A4A2A; }
   .ag-status-label[data-status="postponed"]   { background: #F0E8C8; color: #8a6a1a; }
+
+  /* Move to quarter */
+  .ag-move {
+    display: none; font-size: 11px; font-family: inherit; padding: 4px 8px;
+    border-radius: 6px; border: 1px solid var(--line); background: var(--bg);
+    color: var(--muted); cursor: pointer;
+  }
+  .ag-move:focus { outline: none; border-color: var(--teal); }
 
   /* Remove btn */
   .ag-remove {
@@ -149,6 +210,7 @@
   .form-editing .ag-dot { display: none; }
   .form-editing .ag-text { display: none; }
   .form-editing .ag-text-input { display: block; }
+  .form-editing .ag-move { display: inline-block; }
 
   /* When NOT editing */
   .ag-text-input { display: none; }
@@ -159,9 +221,7 @@
     padding: 40px 20px; text-align: center; color: var(--muted); font-style: italic;
     margin-bottom: 14px;
   }
-  .q-add-cat {
-    display: none; margin-bottom: 14px;
-  }
+  .q-add-cat { display: none; margin-bottom: 14px; }
   .form-editing .q-add-cat { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .q-add-cat label { font-size: 12px; color: var(--muted); font-weight: 600; }
   .q-add-cat select {
@@ -207,9 +267,10 @@
     padding-top: 16px; border-top: 1px solid var(--line);
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 680px) {
     .wrap { padding: 16px; }
     .ag-row { flex-wrap: wrap; }
+    .ov-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -236,15 +297,23 @@
 
   <!-- Quarter tabs -->
   <div class="q-tabs">
+    <button class="q-tab" data-q="overview">Overview</button>
+    <button class="q-tab" data-q="Q1">1st Quarter</button>
     <button class="q-tab active" data-q="Q2">2nd Quarter</button>
     <button class="q-tab" data-q="Q3">3rd Quarter</button>
     <button class="q-tab" data-q="Q4">4th Quarter</button>
   </div>
 
+  <!-- Overview panel -->
+  <div id="panel-overview" class="q-panel">
+    <div class="ov-grid" id="ovGrid"></div>
+  </div>
+
   <!-- Quarter panels -->
-  <div id="Q2" class="q-panel active"></div>
-  <div id="Q3" class="q-panel"></div>
-  <div id="Q4" class="q-panel"></div>
+  <div id="panel-Q1" class="q-panel"></div>
+  <div id="panel-Q2" class="q-panel active"></div>
+  <div id="panel-Q3" class="q-panel"></div>
+  <div id="panel-Q4" class="q-panel"></div>
 
   <div class="save-row">
     <div class="saved-info" id="savedInfo">Not saved yet</div>
@@ -273,6 +342,11 @@ const CAT_COLORS = {
   'Health':              '#8C1A2C',
   'Family':              '#196878',
 };
+const CAT_CLASS = {
+  'Work': 'cat-Work', 'Growth and Learning': 'cat-Growth',
+  'Joyful Pursuits': 'cat-Joyful', 'Health': 'cat-Health', 'Family': 'cat-Family',
+};
+const Q_LABELS = { Q1: '1st Quarter', Q2: '2nd Quarter', Q3: '3rd Quarter', Q4: '4th Quarter' };
 
 const STATUS_OPTIONS = [
   { value: 'not_started', label: 'not started' },
@@ -281,22 +355,22 @@ const STATUS_OPTIONS = [
   { value: 'postponed',   label: 'postponed' },
 ];
 
-// Default goals pre-loaded from the quarterly goals doc
 const DEFAULTS = {
+  Q1: {},
   Q2: {
     'Work': [
-      { text: 'App Launch',                             status: 'not_started' },
-      { text: 'CAIO Role',                              status: 'not_started' },
-      { text: 'Co-op Initiative',                       status: 'not_started' },
-      { text: 'Computer Cleanup / Move to Expedise',    status: 'not_started' },
+      { text: 'App Launch',                          status: 'not_started' },
+      { text: 'CAIO Role',                           status: 'not_started' },
+      { text: 'Co-op Initiative',                    status: 'not_started' },
+      { text: 'Computer Cleanup / Move to Expedise', status: 'not_started' },
     ],
     'Growth and Learning': [
-      { text: 'Claude Masterclass',  status: 'not_started' },
-      { text: 'Vinh Giang',          status: 'not_started' },
+      { text: 'Claude Masterclass', status: 'not_started' },
+      { text: 'Vinh Giang',         status: 'not_started' },
     ],
     'Joyful Pursuits': [
-      { text: 'Start Drums',         status: 'not_started' },
-      { text: 'Going Back to Diving',status: 'not_started' },
+      { text: 'Start Drums',          status: 'not_started' },
+      { text: 'Going Back to Diving', status: 'not_started' },
     ],
     'Family': [
       { text: 'Family Values',           status: 'not_started' },
@@ -310,16 +384,16 @@ const DEFAULTS = {
       { text: 'PR / Thought Leadership Development', status: 'not_started' },
     ],
     'Growth and Learning': [
-      { text: 'Naval Ravikant',              status: 'not_started' },
-      { text: 'Deeper Focus on Communication', status: 'not_started' },
+      { text: 'Naval Ravikant',               status: 'not_started' },
+      { text: 'Deeper Focus on Communication',status: 'not_started' },
     ],
     'Joyful Pursuits': [
-      { text: 'Dancing',             status: 'not_started' },
-      { text: 'Return to Diving',    status: 'not_started' },
+      { text: 'Dancing',          status: 'not_started' },
+      { text: 'Return to Diving', status: 'not_started' },
     ],
     'Family': [
-      { text: 'Garage Sale',         status: 'not_started' },
-      { text: 'Minimize Possessions',status: 'not_started' },
+      { text: 'Garage Sale',          status: 'not_started' },
+      { text: 'Minimize Possessions', status: 'not_started' },
     ],
     'Health': [
       { text: 'Kaizen S11',  status: 'not_started' },
@@ -329,7 +403,6 @@ const DEFAULTS = {
   Q4: {},
 };
 
-// ---------- State ----------
 let goals = {};
 let editMode = false;
 let activeQ = 'Q2';
@@ -338,15 +411,19 @@ let activeQ = 'Q2';
 function loadGoals() {
   const saved = localStorage.getItem(LOCAL_KEY);
   if (saved) {
-    try { goals = JSON.parse(saved); return; } catch {}
+    try {
+      const parsed = JSON.parse(saved);
+      // Make sure Q1 exists (for older saved data)
+      if (!parsed.Q1) parsed.Q1 = {};
+      goals = parsed;
+      return;
+    } catch {}
   }
-  // Deep-clone defaults
   goals = JSON.parse(JSON.stringify(DEFAULTS));
 }
 
 function persistGoals() {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(goals));
-  // Try Supabase (fails silently if table doesn't exist)
   try {
     sb.from('annual_goals')
       .upsert({ year: '2026', data: goals, updated_at: new Date().toISOString() }, { onConflict: 'year' })
@@ -359,19 +436,45 @@ async function tryLoadFromSupabase() {
     const { data } = await sb.from('annual_goals').select('data').eq('year', '2026').maybeSingle();
     if (data && data.data) {
       goals = data.data;
+      if (!goals.Q1) goals.Q1 = {};
       localStorage.setItem(LOCAL_KEY, JSON.stringify(goals));
       renderAll();
     }
   } catch {}
 }
 
-// ---------- Render ----------
-function renderAll() {
-  ['Q2', 'Q3', 'Q4'].forEach(q => renderQuarter(q));
+// ---------- Render: Overview ----------
+function renderOverview() {
+  const grid = document.getElementById('ovGrid');
+  const qs = ['Q1', 'Q2', 'Q3', 'Q4'];
+  grid.innerHTML = qs.map(q => {
+    const qGoals = goals[q] || {};
+    const cats = Object.keys(qGoals).filter(c => qGoals[c] && qGoals[c].length > 0);
+    let inner = '';
+    if (cats.length === 0) {
+      inner = `<div class="ov-empty">No goals yet</div>`;
+    } else {
+      cats.forEach(cat => {
+        inner += `<div class="ov-cat-label ${CAT_CLASS[cat] || ''}">${cat}</div>`;
+        (qGoals[cat] || []).forEach(item => {
+          inner += `<div class="ov-goal-row">
+            <span class="ov-dot" data-s="${item.status}"></span>
+            <span class="ov-text">${item.text}</span>
+            <span class="ov-pill ${item.status}">${STATUS_OPTIONS.find(o=>o.value===item.status)?.label || item.status}</span>
+          </div>`;
+        });
+      });
+    }
+    return `<div class="ov-quadrant">
+      <div class="ov-q-head ${q}">${Q_LABELS[q]}</div>
+      ${inner}
+    </div>`;
+  }).join('');
 }
 
+// ---------- Render: Quarter ----------
 function renderQuarter(q) {
-  const panel = document.getElementById(q);
+  const panel = document.getElementById(`panel-${q}`);
   if (!panel) return;
   const qGoals = goals[q] || {};
   const cats = Object.keys(qGoals).filter(c => qGoals[c] && qGoals[c].length > 0);
@@ -382,7 +485,7 @@ function renderQuarter(q) {
     html = `<div class="q-empty">An open horizon — no goals defined yet.<br><small>Click <strong>Edit</strong> to add your first goal.</small></div>`;
   }
 
-  // Add category picker (shown in edit mode)
+  // Add category picker (edit mode)
   const availableCats = CATS.filter(c => !qGoals[c] || qGoals[c].length === 0);
   html += `<div class="q-add-cat">
     <label>Add category:</label>
@@ -392,10 +495,13 @@ function renderQuarter(q) {
     <button class="q-add-cat-btn" data-q="${q}">+ Add</button>
   </div>`;
 
-  // Render each category
+  // Other quarters for the "move to" dropdown
+  const otherQs = ['Q1','Q2','Q3','Q4'].filter(x => x !== q);
+
   cats.forEach(cat => {
     const items = qGoals[cat] || [];
     const opts = STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+    const moveOpts = otherQs.map(x => `<option value="${x}">${Q_LABELS[x]}</option>`).join('');
     html += `<div class="cat-block" data-q="${q}" data-cat="${cat}">
       <div class="cat-head" data-cat="${cat}">${cat}</div>
       <div class="goal-list">
@@ -407,6 +513,10 @@ function renderQuarter(q) {
             <span class="ag-status-label" data-status="${item.status}">${STATUS_OPTIONS.find(o=>o.value===item.status)?.label || item.status}</span>
             <select class="ag-status" data-value="${item.status}" data-q="${q}" data-cat="${cat}" data-idx="${i}">
               ${opts.replace(`value="${item.status}"`, `value="${item.status}" selected`)}
+            </select>
+            <select class="ag-move" data-q="${q}" data-cat="${cat}" data-idx="${i}" title="Move to quarter">
+              <option value="">Move to…</option>
+              ${moveOpts}
             </select>
             <button class="ag-remove" data-q="${q}" data-cat="${cat}" data-idx="${i}" title="Remove">×</button>
           </div>`).join('')}
@@ -423,7 +533,12 @@ function renderQuarter(q) {
   else panel.classList.remove('form-editing');
 }
 
-// ---------- Edit / View toggle ----------
+function renderAll() {
+  ['Q1','Q2','Q3','Q4'].forEach(q => renderQuarter(q));
+  renderOverview();
+}
+
+// ---------- Edit / View ----------
 function enterEditMode() {
   editMode = true;
   document.getElementById('editBtn').style.display = 'none';
@@ -444,7 +559,21 @@ function showBanner(msg, type) {
   setTimeout(() => b.className = 'banner', 3000);
 }
 
-// ---------- Event delegation ----------
+// ---------- Move goal to another quarter ----------
+function moveGoal(fromQ, cat, idx, toQ) {
+  collectEdits();
+  if (!goals[fromQ]?.[cat]) return;
+  const item = goals[fromQ][cat].splice(parseInt(idx), 1)[0];
+  if (!item) return;
+  if (goals[fromQ][cat].length === 0) delete goals[fromQ][cat];
+  if (!goals[toQ]) goals[toQ] = {};
+  if (!goals[toQ][cat]) goals[toQ][cat] = [];
+  goals[toQ][cat].push(item);
+  renderAll();
+  showBanner(`Moved "${item.text}" to ${Q_LABELS[toQ]}`, 'success');
+}
+
+// ---------- Events ----------
 document.addEventListener('click', e => {
 
   // Quarter tab
@@ -453,14 +582,12 @@ document.addEventListener('click', e => {
     document.querySelectorAll('.q-panel').forEach(p => p.classList.remove('active'));
     e.target.classList.add('active');
     activeQ = e.target.dataset.q;
-    document.getElementById(activeQ).classList.add('active');
+    document.getElementById(`panel-${activeQ}`).classList.add('active');
     return;
   }
 
-  // Edit button
   if (e.target.id === 'editBtn') { enterEditMode(); return; }
 
-  // Save button
   if (e.target.id === 'saveBtn') {
     collectEdits();
     persistGoals();
@@ -471,7 +598,7 @@ document.addEventListener('click', e => {
     return;
   }
 
-  // Add goal button
+  // Add goal
   if (e.target.classList.contains('ag-add-btn')) {
     const q = e.target.dataset.q, cat = e.target.dataset.cat;
     const input = document.querySelector(`.ag-add-input[data-q="${q}"][data-cat="${cat}"]`);
@@ -483,9 +610,6 @@ document.addEventListener('click', e => {
     renderAll();
     return;
   }
-
-  // Add Enter key on add input
-  if (e.target.classList.contains('ag-add-input') && e.type === 'keydown') return;
 
   // Remove goal
   if (e.target.classList.contains('ag-remove')) {
@@ -509,7 +633,7 @@ document.addEventListener('click', e => {
   }
 });
 
-// Enter on add-input adds the goal
+// Enter key on add-input
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.classList.contains('ag-add-input')) {
     const q = e.target.dataset.q, cat = e.target.dataset.cat;
@@ -522,17 +646,26 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Status change
+// Status change & move to quarter
 document.addEventListener('change', e => {
-  if (!e.target.classList.contains('ag-status')) return;
-  const { q, cat, idx } = e.target.dataset;
-  e.target.dataset.value = e.target.value;
-  if (goals[q]?.[cat]?.[parseInt(idx)]) {
-    goals[q][cat][parseInt(idx)].status = e.target.value;
+  if (e.target.classList.contains('ag-status')) {
+    const { q, cat, idx } = e.target.dataset;
+    e.target.dataset.value = e.target.value;
+    if (goals[q]?.[cat]?.[parseInt(idx)]) {
+      goals[q][cat][parseInt(idx)].status = e.target.value;
+    }
+    return;
+  }
+  if (e.target.classList.contains('ag-move')) {
+    const { q, cat, idx } = e.target.dataset;
+    const toQ = e.target.value;
+    if (!toQ) return;
+    moveGoal(q, cat, parseInt(idx), toQ);
+    return;
   }
 });
 
-// Collect text edits from inputs before saving
+// Collect edits before saving or moving
 function collectEdits() {
   document.querySelectorAll('.ag-text-input').forEach(input => {
     const { q, cat, idx } = input.dataset;
