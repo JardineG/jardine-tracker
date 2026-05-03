@@ -262,6 +262,48 @@
   .goal-status[data-value="postponed"]  { background: #fdf2d8;           color: var(--gold);  border-color: var(--gold); }
   .goal-status[data-value="killed"]     { background: var(--bg);         color: var(--muted); border-color: var(--line); }
 
+  /* Priority matrix (Q5) */
+  .priority-matrix {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  @media (max-width: 900px) { .priority-matrix { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px) { .priority-matrix { grid-template-columns: 1fr 1fr; } }
+  .pm-col {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  }
+  .pm-col-head {
+    padding: 8px 10px; font-size: 10px; font-weight: 800;
+    letter-spacing: 1.5px; text-transform: uppercase; text-align: center;
+    color: #fff;
+  }
+  .pm-col[data-cat="Work"]                .pm-col-head { background: #1f5f5f; }
+  .pm-col[data-cat="Growth and Learning"] .pm-col-head { background: #2d5a3d; }
+  .pm-col[data-cat="Joyful Pursuits"]     .pm-col-head { background: #c89a3a; }
+  .pm-col[data-cat="Health"]              .pm-col-head { background: #7a2030; }
+  .pm-col[data-cat="Family"]              .pm-col-head { background: #3f51b5; }
+  .pm-col-body { padding: 8px; display: flex; flex-direction: column; gap: 5px; flex: 1; background: var(--bg); }
+  .pm-item { display: flex; align-items: flex-start; gap: 5px; }
+  .pm-item .pm-num { font-size: 11px; font-weight: 800; color: var(--muted); min-width: 14px; padding-top: 9px; }
+  .pm-item textarea {
+    flex: 1; min-width: 0; padding: 7px 8px;
+    border: 1px solid var(--line); border-radius: 5px;
+    font-size: 12px; font-family: inherit; color: var(--ink);
+    background: #fff; resize: none; overflow: hidden;
+    min-height: 32px; line-height: 1.35; display: block;
+  }
+  .pm-item textarea:focus { outline: none; border-color: var(--gold); }
+  .pm-add {
+    background: transparent; border: 1px dashed var(--line); border-radius: 5px;
+    padding: 4px; cursor: pointer; font-size: 10px; color: var(--muted);
+    font-family: inherit; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; width: 100%; margin-top: 2px;
+  }
+  .pm-add:hover { color: var(--gold); border-color: var(--gold); }
+
   /* Carried-over priorities (auto-shown at top of Q5 from Q2's not-done items) */
   .carried-section {
     background: var(--teal-soft); border: 1px solid var(--teal);
@@ -485,7 +527,7 @@ const QUESTIONS = [
   { key: 'goals_last_week',  title: 'Priorities from last week → what happened', hint: 'each row: the priority, its status, and what actually happened', type: 'goals' },
   { key: 'obstacles_stops',  title: 'What got in the way & what to stop',    hint: 'obstacles, frustrations, patterns to break',                     type: 'text'  },
   { key: 'lessons',          title: 'Lessons',                               hint: 'what did I learn from all of the above?',                        type: 'text'  },
-  { key: 'next_priorities',  title: 'Top 3-5 priorities for next week',      hint: 'what needs to happen to make it better than this one',           type: 'list'  },
+  { key: 'next_priorities',  title: 'Top priorities for next week',           hint: 'enter priorities by life area — Work · Growth · Joy · Health · Family', type: 'matrix' },
 ];
 const MIN_LIST_ROWS = 3;
 const STATUS_OPTIONS = [
@@ -528,15 +570,26 @@ function renderQuestions() {
   const container = document.getElementById('questionsContainer');
   container.innerHTML = QUESTIONS.map((q, i) => {
     let body = '';
-    if (q.type === 'list') {
-      const carriedBlock = q.key === 'next_priorities'
-        ? `<div class="carried-section" data-key="${q.key}">
-             <div class="carried-head">From last week, still to do — pulled in from Q2:</div>
-             <div class="carried-list"></div>
-           </div>`
-        : '';
-      body = `${carriedBlock}
-              <div class="q-list" data-key="${q.key}"></div>
+    if (q.type === 'matrix') {
+      const cats = ['Work', 'Growth and Learning', 'Joyful Pursuits', 'Health', 'Family'];
+      body = `
+        <div class="carried-section" data-key="${q.key}">
+          <div class="carried-head">From last week, still to do — pulled in from Q2:</div>
+          <div class="carried-list"></div>
+        </div>
+        <div class="priority-matrix" data-key="${q.key}">
+          ${cats.map(cat => `
+            <div class="pm-col" data-cat="${cat}">
+              <div class="pm-col-head">${cat}</div>
+              <div class="pm-col-body" data-cat="${cat}">
+                <div class="pm-item"><span class="pm-num">1.</span><textarea class="auto-grow" rows="1" placeholder="Add priority…"></textarea></div>
+                <div class="pm-item"><span class="pm-num">2.</span><textarea class="auto-grow" rows="1" placeholder=""></textarea></div>
+              </div>
+              <button type="button" class="pm-add" data-cat="${cat}">+ add</button>
+            </div>`).join('')}
+        </div>`;
+    } else if (q.type === 'list') {
+      body = `<div class="q-list" data-key="${q.key}"></div>
               <button type="button" class="add-row" data-key="${q.key}">+ Add another</button>
               <div class="prefill-note" data-key="${q.key}"></div>`;
     } else if (q.type === 'goals') {
@@ -656,10 +709,59 @@ function parseGoalsValue(value) {
     .map(g => ({ goal: g, status: 'not_started', outcome: '' }));
 }
 
+const PRIORITY_CATS = ['Work', 'Growth and Learning', 'Joyful Pursuits', 'Health', 'Family'];
+
+function parseMatrixValue(value) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch {}
+  // Legacy: plain newline list → put all under Work
+  const lines = value.split('\n').map(s => s.trim()).filter(Boolean);
+  return lines.length ? { Work: lines } : {};
+}
+
+function setMatrixRows(key, data) {
+  // data: { "Work": ["item1","item2"], ... }
+  const matrix = document.querySelector(`.priority-matrix[data-key="${key}"]`);
+  if (!matrix) return;
+  PRIORITY_CATS.forEach(cat => {
+    const body = matrix.querySelector(`.pm-col-body[data-cat="${cat}"]`);
+    if (!body) return;
+    const items = (data[cat] || []).filter(Boolean);
+    const numRows = Math.max(items.length, 2);
+    body.innerHTML = '';
+    for (let i = 0; i < numRows; i++) {
+      const row = document.createElement('div');
+      row.className = 'pm-item';
+      row.innerHTML = `<span class="pm-num">${i+1}.</span><textarea class="auto-grow" rows="1" placeholder="${i===0?'Add priority…':''}"></textarea>`;
+      if (items[i]) row.querySelector('textarea').value = items[i];
+      body.appendChild(row);
+    }
+    autoGrowAll(body);
+  });
+}
+
+function collectMatrixValue(key) {
+  const matrix = document.querySelector(`.priority-matrix[data-key="${key}"]`);
+  if (!matrix) return '';
+  const out = {};
+  PRIORITY_CATS.forEach(cat => {
+    const fields = matrix.querySelectorAll(`.pm-col-body[data-cat="${cat}"] textarea`);
+    out[cat] = Array.from(fields).map(f => f.value.trim()).filter(Boolean);
+  });
+  const hasAny = Object.values(out).some(arr => arr.length > 0);
+  return hasAny ? JSON.stringify(out) : '';
+}
+
 function fillAnswers(review) {
   QUESTIONS.forEach(q => {
     const value = review && review[q.key] ? review[q.key] : '';
-    if (q.type === 'list') {
+    if (q.type === 'matrix') {
+      setMatrixRows(q.key, parseMatrixValue(value));
+      refreshCarriedPriorities();
+    } else if (q.type === 'list') {
       const items = value ? value.split('\n').filter(v => v.trim()) : [];
       setListRows(q.key, items);
       const note = document.querySelector(`.prefill-note[data-key="${q.key}"]`);
@@ -679,7 +781,9 @@ function fillAnswers(review) {
 function collectAnswers() {
   const out = {};
   QUESTIONS.forEach(q => {
-    if (q.type === 'list') {
+    if (q.type === 'matrix') {
+      out[q.key] = collectMatrixValue(q.key);
+    } else if (q.type === 'list') {
       const fields = document.querySelectorAll(`.q-list[data-key="${q.key}"] textarea`);
       const values = Array.from(fields).map(f => f.value.trim()).filter(v => v);
       out[q.key] = values.join('\n');
@@ -1090,6 +1194,37 @@ document.getElementById('thisWeekBtn').addEventListener('click', () => {
 });
 document.getElementById('saveBtn').addEventListener('click', saveReview);
 
+// "+ add" button inside priority matrix columns
+document.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('pm-add')) return;
+  const cat = e.target.dataset.cat;
+  const col = e.target.closest('.pm-col');
+  const body = col.querySelector('.pm-col-body');
+  const next = body.children.length + 1;
+  const row = document.createElement('div');
+  row.className = 'pm-item';
+  row.innerHTML = `<span class="pm-num">${next}.</span><textarea class="auto-grow" rows="1" placeholder=""></textarea>`;
+  body.appendChild(row);
+  autoGrow(row.querySelector('textarea'));
+  row.querySelector('textarea').focus();
+});
+
+// Enter in a matrix cell → next row in same column (or add one)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && e.target.matches('.pm-item textarea')) {
+    e.preventDefault();
+    const body = e.target.closest('.pm-col-body');
+    const rows = Array.from(body.querySelectorAll('.pm-item'));
+    const idx = rows.indexOf(e.target.closest('.pm-item'));
+    if (idx < rows.length - 1) {
+      rows[idx + 1].querySelector('textarea').focus();
+    } else {
+      const cat = body.dataset.cat;
+      body.closest('.pm-col').querySelector('.pm-add').click();
+    }
+  }
+}, true);
+
 // "+ Add another" button — append a row matching the question's type
 document.addEventListener('click', (e) => {
   if (!e.target.classList.contains('add-row')) return;
@@ -1160,7 +1295,7 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('input', (e) => {
   if (e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
   if (e.target.classList && e.target.classList.contains('goal-input')) refreshCarriedPriorities();
-  if (e.target.closest && e.target.closest('.q-list[data-key="next_priorities"]')) refreshPostponedChecked();
+  if (e.target.closest && (e.target.closest('.q-list[data-key="next_priorities"]') || e.target.closest('.priority-matrix[data-key="next_priorities"]'))) refreshPostponedChecked();
 });
 
 // Postponed checkbox toggled — sync into Q5
