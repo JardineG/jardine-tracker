@@ -638,7 +638,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ---------- The 6 questions ----------
 const QUESTIONS = [
   { key: 'wins',             title: 'Wins',                                  hint: 'what went well this week',                                       type: 'list'  },
-  { key: 'goals_last_week',  title: 'Priorities · grade last week, then track this week', hint: 'grade last week\'s priorities → after saving, this updates to show this week\'s plan so you can track progress during the week', type: 'goals' },
+  { key: 'goals_last_week',  title: 'Priorities from last week → what happened', hint: 'each row: the priority, its status, and which life area it belongs to', type: 'goals' },
   { key: 'obstacles_stops',  title: 'What got in the way & what to stop',    hint: 'obstacles, frustrations, patterns to break',                     type: 'text'  },
   { key: 'lessons',          title: 'Lessons',                               hint: 'what did I learn from all of the above?',                        type: 'text'  },
   { key: 'next_priorities',  title: 'Top priorities for next week',           hint: 'enter priorities by life area — Work · Growth · Joy · Health · Family', type: 'matrix' },
@@ -1134,7 +1134,6 @@ async function saveReview() {
     updated_at: new Date().toISOString(),
   };
 
-  // Step 1: Save everything including graded Q2 + new Q5 priorities
   const { data, error } = await sb
     .from('weekly_reviews')
     .upsert(payload, { onConflict: 'week_ending' })
@@ -1148,43 +1147,14 @@ async function saveReview() {
     return;
   }
 
-  // Run archive now so it captures the graded Q2 data before we overwrite it
-  loadCompletedArchive();
-
-  // Step 2: Build new Q2 from Q5 — this week's priorities start as "not started"
-  let newGoals = [];
-  try {
-    const matrix = JSON.parse(answers.next_priorities || '{}');
-    PRIORITY_CATS.forEach(cat => {
-      (matrix[cat] || []).filter(Boolean).forEach(g => {
-        newGoals.push({ goal: g, status: 'not_started', category: cat });
-      });
-    });
-  } catch {}
-
-  if (newGoals.length > 0) {
-    // Step 3: Save Q2 with this week's priorities
-    const patch = {
-      week_ending: dateStr,
-      goals_last_week: JSON.stringify(newGoals),
-      updated_at: new Date().toISOString(),
-    };
-    const { data: data2 } = await sb
-      .from('weekly_reviews')
-      .upsert(patch, { onConflict: 'week_ending' })
-      .select()
-      .maybeSingle();
-    currentReview = data2 || data;
-  } else {
-    currentReview = data;
-  }
-
+  currentReview = data;
   document.getElementById('savedInfo').textContent = `Saved ${new Date().toLocaleString()}`;
-  showBanner('Review saved — Q2 now shows this week\'s priorities to track.', 'success');
-  if (currentReview) fillAnswers(currentReview);
+  showBanner('Review saved.', 'success');
+  if (data) fillAnswers(data);
   enterViewMode();
   loadPastReviews();
   loadPostponedProjects();
+  loadCompletedArchive();
 }
 
 // ---------- Week-ahead schedule (snapshot from Google Calendar) ----------
