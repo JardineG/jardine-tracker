@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>infinite YOU · Annual Goals</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #EDE8D8;
+    --panel: #F5F1E8;
+    --ink: #2E2E2E;
+    --muted: #7A7A7A;
+    --line: #D4CCBA;
+    --gold: #C2A040;
+    --teal: #196878;
+    --teal-soft: #CCE4E8;
+    --red: #8C1A2C;
+    --red-soft: #EED4D8;
+    --green: #1A4A2A;
+    --green-soft: #D0E8D4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px; }
+
+  .top-nav {
+    display: flex; gap: 4px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--line); flex-wrap: wrap;
+  }
+  .top-nav a {
+    padding: 10px 18px; text-decoration: none; color: var(--muted);
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .top-nav a:hover { color: var(--ink); }
+  .top-nav a.active { color: var(--ink); border-bottom-color: var(--gold); }
+
+  .header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 20px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .brand h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+  .brand h1 span { color: var(--gold); }
+  .brand .sub { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+
+  /* Quarter tabs */
+  .q-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .q-tab {
+    padding: 8px 22px; border-radius: 20px; border: 2px solid var(--line);
+    background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700;
+    letter-spacing: 1px; cursor: pointer; font-family: inherit; transition: all 0.12s;
+  }
+  .q-tab:hover { border-color: var(--gold); color: var(--ink); }
+  .q-tab.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+
+  /* Quarter panel */
+  .q-panel { display: none; }
+  .q-panel.active { display: block; }
+
+  /* Category block */
+  .cat-block { margin-bottom: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  .cat-head {
+    padding: 10px 16px; color: #fff; font-size: 11px; font-weight: 800;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .cat-head[data-cat="Work"]                { background: #4A8FD4; }
+  .cat-head[data-cat="Growth and Learning"] { background: #1A4A2A; }
+  .cat-head[data-cat="Joyful Pursuits"]     { background: #C2A040; }
+  .cat-head[data-cat="Health"]              { background: #8C1A2C; }
+  .cat-head[data-cat="Family"]              { background: #196878; }
+
+  /* Goal rows */
+  .goal-list { background: var(--panel); }
+  .ag-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+  }
+  .ag-row:last-child { border-bottom: none; }
+  .ag-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .ag-dot[data-status="not_started"] { background: #9ca3af; }
+  .ag-dot[data-status="in_progress"] { background: #4A8FD4; }
+  .ag-dot[data-status="completed"]   { background: #1A4A2A; }
+  .ag-dot[data-status="postponed"]   { background: #C2A040; }
+  .ag-text { flex: 1; font-size: 14px; color: var(--ink); line-height: 1.4; }
+  .ag-text-input {
+    flex: 1; font-size: 14px; color: var(--ink); font-family: inherit;
+    border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px;
+    background: #fff; outline: none;
+  }
+  .ag-text-input:focus { border-color: var(--gold); }
+
+  /* Status pill */
+  .ag-status {
+    padding: 4px 10px; border-radius: 20px; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 700; font-family: inherit;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='rgba(0,0,0,0.2)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 7px center; padding-right: 20px;
+    display: none; /* only in edit mode */
+  }
+  .ag-status[data-value="not_started"] { background: #e5e7eb; color: #374151; }
+  .ag-status[data-value="in_progress"] { background: #CCE4E8; color: #196878; }
+  .ag-status[data-value="completed"]   { background: #D0E8D4; color: #1A4A2A; }
+  .ag-status[data-value="postponed"]   { background: #F0E8C8; color: #8a6a1a; }
+  .ag-status-label {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+  }
+  .ag-status-label[data-status="not_started"] { background: #e5e7eb; color: #374151; }
+  .ag-status-label[data-status="in_progress"] { background: #CCE4E8; color: #196878; }
+  .ag-status-label[data-status="completed"]   { background: #D0E8D4; color: #1A4A2A; }
+  .ag-status-label[data-status="postponed"]   { background: #F0E8C8; color: #8a6a1a; }
+
+  /* Remove btn */
+  .ag-remove {
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    font-size: 16px; line-height: 1; padding: 0 4px; display: none;
+  }
+  .ag-remove:hover { color: var(--red); }
+
+  /* Add goal row */
+  .ag-add-row {
+    display: none; align-items: center; gap: 8px;
+    padding: 8px 16px; background: var(--bg);
+  }
+  .ag-add-input {
+    flex: 1; font-size: 13px; font-family: inherit; padding: 6px 10px;
+    border: 1px dashed var(--line); border-radius: 6px; background: var(--panel);
+    outline: none; color: var(--ink);
+  }
+  .ag-add-input:focus { border-color: var(--gold); }
+  .ag-add-btn {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--gold);
+    background: transparent; color: var(--gold); font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .ag-add-btn:hover { background: var(--gold); color: #fff; }
+
+  /* Edit mode toggles */
+  .form-editing .ag-status { display: inline-block; }
+  .form-editing .ag-status-label { display: none; }
+  .form-editing .ag-remove { display: inline-block; }
+  .form-editing .ag-add-row { display: flex; }
+  .form-editing .ag-dot { display: none; }
+  .form-editing .ag-text { display: none; }
+  .form-editing .ag-text-input { display: block; }
+
+  /* When NOT editing */
+  .ag-text-input { display: none; }
+
+  /* Empty quarter */
+  .q-empty {
+    background: var(--panel); border: 1px dashed var(--line); border-radius: 12px;
+    padding: 40px 20px; text-align: center; color: var(--muted); font-style: italic;
+    margin-bottom: 14px;
+  }
+  .q-add-cat {
+    display: none; margin-bottom: 14px;
+  }
+  .form-editing .q-add-cat { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .q-add-cat label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .q-add-cat select {
+    padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line);
+    font-family: inherit; font-size: 13px; background: var(--panel); color: var(--ink);
+  }
+  .q-add-cat-btn {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--teal);
+    background: transparent; color: var(--teal); font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .q-add-cat-btn:hover { background: var(--teal); color: #fff; }
+
+  /* Save row */
+  .save-row {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 10px; margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--line);
+  }
+  .saved-info { font-size: 12px; color: var(--muted); margin-right: auto; }
+  .btn-primary {
+    padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 700;
+    cursor: pointer; font-family: inherit; background: var(--gold); border: none; color: #fff;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-secondary {
+    padding: 10px 22px; border-radius: 10px; font-size: 14px; font-weight: 700;
+    cursor: pointer; font-family: inherit; background: transparent;
+    border: 2px solid var(--teal); color: var(--teal);
+  }
+  .btn-secondary:hover { background: var(--teal-soft); }
+
+  .banner {
+    padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;
+    font-size: 13px; font-weight: 600; display: none;
+  }
+  .banner.show { display: block; }
+  .banner.success { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
+  .banner.warn { background: #fff5d6; color: #8a6a1a; border: 1px solid var(--gold); }
+
+  .footer {
+    display: flex; justify-content: space-between; font-size: 11px; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase; margin-top: 40px;
+    padding-top: 16px; border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 16px; }
+    .ag-row { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="top-nav">
+    <a href="index.html">Daily Habits</a>
+    <a href="weekly-review.html">Weekly Review</a>
+    <a href="annual-goals.html" class="active">Annual Goals</a>
+    <a href="books.html">Books</a>
+    <a href="movies.html">Movies</a>
+    <a href="places.html">Places</a>
+  </nav>
+
+  <div class="header">
+    <div class="brand">
+      <h1>infinite <span>YOU</span></h1>
+      <div class="sub">Annual Goals · 2026 · Jardine Gerodias</div>
+    </div>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <!-- Quarter tabs -->
+  <div class="q-tabs">
+    <button class="q-tab active" data-q="Q2">2nd Quarter</button>
+    <button class="q-tab" data-q="Q3">3rd Quarter</button>
+    <button class="q-tab" data-q="Q4">4th Quarter</button>
+  </div>
+
+  <!-- Quarter panels -->
+  <div id="Q2" class="q-panel active"></div>
+  <div id="Q3" class="q-panel"></div>
+  <div id="Q4" class="q-panel"></div>
+
+  <div class="save-row">
+    <div class="saved-info" id="savedInfo">Not saved yet</div>
+    <button class="btn-secondary" id="editBtn">Edit</button>
+    <button class="btn-primary" id="saveBtn" style="display:none">Save goals</button>
+  </div>
+
+  <div class="footer">
+    <div>MY LOVE AND GREATNESS MOVES MOUNTAINS.</div>
+    <div>Jardine Gerodias</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://prqpnfrfwquncyfysvks.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_zXQdgBgA0DXTf7julXpQkw_A4Gd-57l';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const LOCAL_KEY = 'infiniteYou_annualGoals_2026';
+
+const CATS = ['Work', 'Growth and Learning', 'Joyful Pursuits', 'Health', 'Family'];
+const CAT_COLORS = {
+  'Work':                '#4A8FD4',
+  'Growth and Learning': '#1A4A2A',
+  'Joyful Pursuits':     '#C2A040',
+  'Health':              '#8C1A2C',
+  'Family':              '#196878',
+};
+
+const STATUS_OPTIONS = [
+  { value: 'not_started', label: 'not started' },
+  { value: 'in_progress', label: 'in progress' },
+  { value: 'completed',   label: 'completed' },
+  { value: 'postponed',   label: 'postponed' },
+];
+
+// Default goals pre-loaded from the quarterly goals doc
+const DEFAULTS = {
+  Q2: {
+    'Work': [
+      { text: 'App Launch',                             status: 'not_started' },
+      { text: 'CAIO Role',                              status: 'not_started' },
+      { text: 'Co-op Initiative',                       status: 'not_started' },
+      { text: 'Computer Cleanup / Move to Expedise',    status: 'not_started' },
+    ],
+    'Growth and Learning': [
+      { text: 'Claude Masterclass',  status: 'not_started' },
+      { text: 'Vinh Giang',          status: 'not_started' },
+    ],
+    'Joyful Pursuits': [
+      { text: 'Start Drums',         status: 'not_started' },
+      { text: 'Going Back to Diving',status: 'not_started' },
+    ],
+    'Family': [
+      { text: 'Family Values',           status: 'not_started' },
+      { text: 'Weekly Date with Gen',    status: 'not_started' },
+      { text: 'Weekly Movies with Kids', status: 'not_started' },
+    ],
+  },
+  Q3: {
+    'Work': [
+      { text: 'PR / Thought Leadership Development', status: 'not_started' },
+    ],
+    'Growth and Learning': [
+      { text: 'Naval Ravikant',              status: 'not_started' },
+      { text: 'Deeper Focus on Communication', status: 'not_started' },
+    ],
+    'Joyful Pursuits': [
+      { text: 'Dancing',             status: 'not_started' },
+      { text: 'Return to Diving',    status: 'not_started' },
+    ],
+    'Family': [
+      { text: 'Garage Sale',         status: 'not_started' },
+      { text: 'Minimize Possessions',status: 'not_started' },
+    ],
+    'Health': [
+      { text: 'Kaizen S11',  status: 'not_started' },
+      { text: 'Cold Plunge', status: 'not_started' },
+    ],
+  },
+  Q4: {},
+};
+
+// ---------- State ----------
+let goals = {};
+let editMode = false;
+let activeQ = 'Q2';
+
+// ---------- Load / Save ----------
+function loadGoals() {
+  const saved = localStorage.getItem(LOCAL_KEY);
+  if (saved) {
+    try { goals = JSON.parse(saved); return; } catch {}
+  }
+  // Deep-clone defaults
+  goals = JSON.parse(JSON.stringify(DEFAULTS));
+}
+
+function persistGoals() {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(goals));
+  // Try Supabase (fails silently if table doesn't exist)
+  try {
+    sb.from('annual_goals')
+      .upsert({ year: '2026', data: goals, updated_at: new Date().toISOString() }, { onConflict: 'year' })
+      .then(() => {});
+  } catch {}
+}
+
+async function tryLoadFromSupabase() {
+  try {
+    const { data } = await sb.from('annual_goals').select('data').eq('year', '2026').maybeSingle();
+    if (data && data.data) {
+      goals = data.data;
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(goals));
+      renderAll();
+    }
+  } catch {}
+}
+
+// ---------- Render ----------
+function renderAll() {
+  ['Q2', 'Q3', 'Q4'].forEach(q => renderQuarter(q));
+}
+
+function renderQuarter(q) {
+  const panel = document.getElementById(q);
+  if (!panel) return;
+  const qGoals = goals[q] || {};
+  const cats = Object.keys(qGoals).filter(c => qGoals[c] && qGoals[c].length > 0);
+
+  let html = '';
+
+  if (cats.length === 0 && !editMode) {
+    html = `<div class="q-empty">An open horizon — no goals defined yet.<br><small>Click <strong>Edit</strong> to add your first goal.</small></div>`;
+  }
+
+  // Add category picker (shown in edit mode)
+  const availableCats = CATS.filter(c => !qGoals[c] || qGoals[c].length === 0);
+  html += `<div class="q-add-cat">
+    <label>Add category:</label>
+    <select id="newCatSelect_${q}">
+      ${availableCats.map(c => `<option value="${c}">${c}</option>`).join('')}
+    </select>
+    <button class="q-add-cat-btn" data-q="${q}">+ Add</button>
+  </div>`;
+
+  // Render each category
+  cats.forEach(cat => {
+    const items = qGoals[cat] || [];
+    const opts = STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+    html += `<div class="cat-block" data-q="${q}" data-cat="${cat}">
+      <div class="cat-head" data-cat="${cat}">${cat}</div>
+      <div class="goal-list">
+        ${items.map((item, i) => `
+          <div class="ag-row" data-idx="${i}">
+            <span class="ag-dot" data-status="${item.status}"></span>
+            <span class="ag-text">${item.text}</span>
+            <input class="ag-text-input" value="${item.text}" data-q="${q}" data-cat="${cat}" data-idx="${i}" />
+            <span class="ag-status-label" data-status="${item.status}">${STATUS_OPTIONS.find(o=>o.value===item.status)?.label || item.status}</span>
+            <select class="ag-status" data-value="${item.status}" data-q="${q}" data-cat="${cat}" data-idx="${i}">
+              ${opts.replace(`value="${item.status}"`, `value="${item.status}" selected`)}
+            </select>
+            <button class="ag-remove" data-q="${q}" data-cat="${cat}" data-idx="${i}" title="Remove">×</button>
+          </div>`).join('')}
+        <div class="ag-add-row">
+          <input class="ag-add-input" placeholder="Add a goal…" data-q="${q}" data-cat="${cat}" />
+          <button class="ag-add-btn" data-q="${q}" data-cat="${cat}">+ Add</button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  panel.innerHTML = html;
+  if (editMode) panel.classList.add('form-editing');
+  else panel.classList.remove('form-editing');
+}
+
+// ---------- Edit / View toggle ----------
+function enterEditMode() {
+  editMode = true;
+  document.getElementById('editBtn').style.display = 'none';
+  document.getElementById('saveBtn').style.display = '';
+  document.querySelectorAll('.q-panel').forEach(p => p.classList.add('form-editing'));
+}
+
+function enterViewMode() {
+  editMode = false;
+  document.getElementById('editBtn').style.display = '';
+  document.getElementById('saveBtn').style.display = 'none';
+  document.querySelectorAll('.q-panel').forEach(p => p.classList.remove('form-editing'));
+}
+
+function showBanner(msg, type) {
+  const b = document.getElementById('banner');
+  b.textContent = msg; b.className = `banner show ${type}`;
+  setTimeout(() => b.className = 'banner', 3000);
+}
+
+// ---------- Event delegation ----------
+document.addEventListener('click', e => {
+
+  // Quarter tab
+  if (e.target.classList.contains('q-tab')) {
+    document.querySelectorAll('.q-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.q-panel').forEach(p => p.classList.remove('active'));
+    e.target.classList.add('active');
+    activeQ = e.target.dataset.q;
+    document.getElementById(activeQ).classList.add('active');
+    return;
+  }
+
+  // Edit button
+  if (e.target.id === 'editBtn') { enterEditMode(); return; }
+
+  // Save button
+  if (e.target.id === 'saveBtn') {
+    collectEdits();
+    persistGoals();
+    document.getElementById('savedInfo').textContent = `Saved ${new Date().toLocaleString()}`;
+    showBanner('Goals saved.', 'success');
+    renderAll();
+    enterViewMode();
+    return;
+  }
+
+  // Add goal button
+  if (e.target.classList.contains('ag-add-btn')) {
+    const q = e.target.dataset.q, cat = e.target.dataset.cat;
+    const input = document.querySelector(`.ag-add-input[data-q="${q}"][data-cat="${cat}"]`);
+    const text = input?.value.trim();
+    if (!text) return;
+    if (!goals[q]) goals[q] = {};
+    if (!goals[q][cat]) goals[q][cat] = [];
+    goals[q][cat].push({ text, status: 'not_started' });
+    renderAll();
+    return;
+  }
+
+  // Add Enter key on add input
+  if (e.target.classList.contains('ag-add-input') && e.type === 'keydown') return;
+
+  // Remove goal
+  if (e.target.classList.contains('ag-remove')) {
+    const { q, cat, idx } = e.target.dataset;
+    goals[q][cat].splice(parseInt(idx), 1);
+    if (goals[q][cat].length === 0) delete goals[q][cat];
+    renderAll();
+    return;
+  }
+
+  // Add category
+  if (e.target.classList.contains('q-add-cat-btn')) {
+    const q = e.target.dataset.q;
+    const sel = document.getElementById(`newCatSelect_${q}`);
+    const cat = sel?.value;
+    if (!cat) return;
+    if (!goals[q]) goals[q] = {};
+    if (!goals[q][cat]) goals[q][cat] = [];
+    renderAll();
+    return;
+  }
+});
+
+// Enter on add-input adds the goal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList.contains('ag-add-input')) {
+    const q = e.target.dataset.q, cat = e.target.dataset.cat;
+    const text = e.target.value.trim();
+    if (!text) return;
+    if (!goals[q]) goals[q] = {};
+    if (!goals[q][cat]) goals[q][cat] = [];
+    goals[q][cat].push({ text, status: 'not_started' });
+    renderAll();
+  }
+});
+
+// Status change
+document.addEventListener('change', e => {
+  if (!e.target.classList.contains('ag-status')) return;
+  const { q, cat, idx } = e.target.dataset;
+  e.target.dataset.value = e.target.value;
+  if (goals[q]?.[cat]?.[parseInt(idx)]) {
+    goals[q][cat][parseInt(idx)].status = e.target.value;
+  }
+});
+
+// Collect text edits from inputs before saving
+function collectEdits() {
+  document.querySelectorAll('.ag-text-input').forEach(input => {
+    const { q, cat, idx } = input.dataset;
+    const text = input.value.trim();
+    if (goals[q]?.[cat]?.[parseInt(idx)] !== undefined) {
+      goals[q][cat][parseInt(idx)].text = text;
+    }
+  });
+  document.querySelectorAll('.ag-status').forEach(sel => {
+    const { q, cat, idx } = sel.dataset;
+    if (goals[q]?.[cat]?.[parseInt(idx)] !== undefined) {
+      goals[q][cat][parseInt(idx)].status = sel.value;
+    }
+  });
+}
+
+// ---------- Init ----------
+loadGoals();
+renderAll();
+tryLoadFromSupabase();
+</script>
+</body>
+</html>
