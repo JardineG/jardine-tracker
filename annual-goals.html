@@ -31,15 +31,17 @@
   .brand .sub { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
 
   /* Year selector */
-  .year-selector { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-  .year-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
-  .year-btn {
-    padding: 5px 14px; border-radius: 20px; border: 2px solid var(--line);
-    background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700;
-    cursor: pointer; font-family: inherit; transition: all 0.12s;
+  .year-selector { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+  .year-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  .year-select {
+    padding: 7px 32px 7px 14px; border-radius: 20px; border: 2px solid var(--teal);
+    background: var(--teal); color: #fff; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,0.8)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    outline: none;
   }
-  .year-btn:hover { border-color: var(--teal); color: var(--teal); }
-  .year-btn.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .year-select:hover { opacity: 0.9; }
 
   /* Quarter tabs */
   .q-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -191,8 +193,10 @@
   <div class="banner" id="banner"></div>
 
   <!-- Year selector -->
-  <div class="year-selector" id="yearSelector">
+  <div class="year-selector">
     <span class="year-label">Year</span>
+    <select class="year-select" id="yearSelect">
+    </select>
   </div>
 
   <!-- Quarter tabs -->
@@ -353,9 +357,8 @@ function qLabel(q) { return `${Q_NAMES[q]} ${currentYear}`; }
 
 // ---------- Year selector ----------
 function renderYearSelector() {
-  const sel = document.getElementById('yearSelector');
-  sel.innerHTML = '<span class="year-label">Year</span>' +
-    YEARS.map(y => `<button class="year-btn${y===currentYear?' active':''}" data-year="${y}">${y}</button>`).join('');
+  const sel = document.getElementById('yearSelect');
+  sel.innerHTML = YEARS.map(y => `<option value="${y}"${y===currentYear?' selected':''}>${y}</option>`).join('');
 }
 
 function switchYear(year) {
@@ -365,7 +368,6 @@ function switchYear(year) {
   document.getElementById('editBtn').style.display = '';
   document.getElementById('saveBtn').style.display = 'none';
   loadGoals(year);
-  renderYearSelector();
   updateQTabs();
   renderAll();
   document.getElementById('headerSub').textContent = `Annual Goals · ${year} · Jardine Gerodias`;
@@ -558,10 +560,6 @@ function collectEdits() {
 
 // ---------- Events ----------
 document.addEventListener('click', e => {
-  // Year button
-  if (e.target.classList.contains('year-btn')) {
-    switchYear(parseInt(e.target.dataset.year)); return;
-  }
   // Quarter tab
   if (e.target.classList.contains('q-tab')) {
     document.querySelectorAll('.q-tab').forEach(t => t.classList.remove('active'));
@@ -606,6 +604,11 @@ document.addEventListener('keydown', e => {
     goals[q][cat].push({ text, status:'not_started' });
     renderAll();
   }
+});
+
+// Year select
+document.getElementById('yearSelect').addEventListener('change', e => {
+  switchYear(parseInt(e.target.value));
 });
 
 // Status change + move
