@@ -355,32 +355,6 @@
   .pm-add:hover { color: var(--gold); border-color: var(--gold); }
 
   /* Carried-over priorities (auto-shown at top of Q5 from Q2's not-done items) */
-  .carried-section {
-    background: var(--teal-soft); border: 1px solid var(--teal);
-    border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;
-    display: none;
-  }
-  .carried-section.show { display: block; }
-  .carried-head {
-    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
-    color: var(--teal); font-weight: 800; margin-bottom: 8px;
-  }
-  .carried-list { display: flex; flex-direction: column; gap: 6px; }
-  .carried-item {
-    display: flex; align-items: center; gap: 10px;
-    background: #fff; border: 1px solid var(--teal-soft);
-    padding: 6px 10px; border-radius: 6px;
-  }
-  .carried-item .num {
-    font-weight: 800; color: var(--teal); font-size: 13px; min-width: 22px; text-align: right;
-  }
-  .carried-item .text { flex: 1; font-size: 14px; color: var(--ink); line-height: 1.4; }
-  .carried-item .status-pill {
-    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-    padding: 3px 8px; border-radius: 4px; white-space: nowrap;
-  }
-  .carried-item .status-pill[data-value="not_started"] { background: var(--bg); color: var(--muted); }
-  .carried-item .status-pill[data-value="incomplete"]  { background: var(--red-soft); color: var(--red); }
 
   @media (max-width: 760px) {
     .goal-row {
@@ -706,10 +680,6 @@ function renderQuestions() {
     if (q.type === 'matrix') {
       const cats = ['Work', 'Growth and Learning', 'Joyful Pursuits', 'Health', 'Family'];
       body = `
-        <div class="carried-section" data-key="${q.key}">
-          <div class="carried-head">From last week, still to do — pulled in from Q2:</div>
-          <div class="carried-list"></div>
-        </div>
         <div class="priority-matrix" data-key="${q.key}">
           ${cats.map(cat => `
             <div class="pm-col" data-cat="${cat}">
@@ -757,32 +727,6 @@ function escapeHtml(s) {
 
 // Scan Q2 (priorities + status) and surface any not_started/incomplete items
 // at the top of Q5 so unfinished work auto-rolls into next week's plan.
-function refreshCarriedPriorities() {
-  const q2Rows = document.querySelectorAll('.q-goals[data-key="goals_last_week"] .goal-row');
-  const carried = [];
-  q2Rows.forEach(row => {
-    const priority = row.querySelector('.goal-input').value.trim();
-    const status   = row.querySelector('.goal-status').value;
-    if (priority && (status === 'not_started' || status === 'incomplete')) {
-      carried.push({ text: priority, status });
-    }
-  });
-  const section = document.querySelector('.carried-section[data-key="next_priorities"]');
-  if (!section) return;
-  if (carried.length === 0) {
-    section.classList.remove('show');
-    return;
-  }
-  section.classList.add('show');
-  const list = section.querySelector('.carried-list');
-  list.innerHTML = carried.map((it, i) => `
-    <div class="carried-item">
-      <span class="num">${i + 1}.</span>
-      <span class="text">${escapeHtml(it.text)}</span>
-      <span class="status-pill" data-value="${it.status}">${it.status.replace('_', ' ')}</span>
-    </div>
-  `).join('');
-}
 
 // Build N numbered rows for a simple list-type question.
 function setListRows(key, values) {
@@ -960,7 +904,6 @@ function fillAnswers(review) {
     const value = review && review[q.key] ? review[q.key] : '';
     if (q.type === 'matrix') {
       setMatrixRows(q.key, parseMatrixValue(value));
-      refreshCarriedPriorities();
     } else if (q.type === 'list') {
       const items = value ? value.split('\n').filter(v => v.trim()) : [];
       setListRows(q.key, items);
@@ -975,7 +918,6 @@ function fillAnswers(review) {
       if (el) el.value = value;
     }
   });
-  refreshCarriedPriorities();
 }
 
 function collectAnswers() {
@@ -1565,11 +1507,9 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Auto-grow textareas as the user types; refresh carried priorities when a Q2
-// priority text is edited; refresh postponed checkmarks when Q5 changes.
+// Auto-grow textareas as the user types; refresh postponed checkmarks when Q5 changes.
 document.addEventListener('input', (e) => {
   if (e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
-  if (e.target.classList && e.target.classList.contains('goal-input')) refreshCarriedPriorities();
   if (e.target.closest && (e.target.closest('.q-list[data-key="next_priorities"]') || e.target.closest('.priority-matrix[data-key="next_priorities"]'))) refreshPostponedChecked();
 });
 
@@ -1609,12 +1549,10 @@ document.addEventListener('change', (e) => {
   }
 });
 
-// Status dropdown: keep data-value in sync so CSS can color it,
-// and re-evaluate which priorities should carry over to Q5.
+// Status dropdown: keep data-value in sync so CSS can color it.
 document.addEventListener('change', (e) => {
   if (e.target.classList.contains('goal-status')) {
     e.target.dataset.value = e.target.value;
-    refreshCarriedPriorities();
   }
   if (e.target.classList.contains('goal-cat')) {
     e.target.dataset.cat = e.target.value;
