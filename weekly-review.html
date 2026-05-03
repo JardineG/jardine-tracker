@@ -458,6 +458,80 @@
     .week-nav { width: 100%; justify-content: space-between; }
     .week-label { min-width: 0; flex: 1; font-size: 13px; }
   }
+
+  /* ---- Week Plan Card (shown when locked) ---- */
+  #weekPlanCard {
+    display: none;
+    background: var(--panel);
+    border: 2px solid var(--teal);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .wpc-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; gap: 12px; flex-wrap: wrap;
+  }
+  .wpc-title {
+    font-size: 11px; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--teal);
+  }
+  .wpc-sub { font-size: 12px; color: var(--muted); }
+  .wpc-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;
+  }
+  .wpc-col-head {
+    color: #fff; font-size: 10px; font-weight: 800; letter-spacing: 0.8px;
+    text-transform: uppercase; padding: 5px 10px; border-radius: 6px 6px 0 0;
+  }
+  .wpc-col-body {
+    padding: 8px 10px; background: var(--bg); border-radius: 0 0 8px 8px; min-height: 28px;
+  }
+  .wpc-item { display: flex; gap: 6px; margin-bottom: 5px; line-height: 1.4; }
+  .wpc-dot { color: var(--muted); flex-shrink: 0; }
+  .wpc-text { font-size: 13px; color: var(--ink); }
+  .wpc-empty { font-size: 12px; color: var(--muted); font-style: italic; }
+
+  /* ---- Lock / Edit mode ---- */
+  .btn-secondary {
+    padding: 10px 22px; border-radius: 10px; font-size: 14px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    background: transparent; border: 2px solid var(--teal); color: var(--teal);
+  }
+  .btn-secondary:hover { background: var(--teal-soft); }
+
+  /* When form is locked: make inputs look read-only without changing values */
+  .form-locked .targets-card input {
+    pointer-events: none;
+    background: var(--bg) !important;
+    border-color: transparent !important;
+    color: var(--muted) !important;
+  }
+  .form-locked #questionsContainer textarea,
+  .form-locked #questionsContainer input {
+    pointer-events: none;
+    background: transparent !important;
+    border-color: transparent !important;
+    resize: none;
+    color: var(--ink) !important;
+  }
+  .form-locked #questionsContainer select {
+    pointer-events: none;
+    background: transparent !important;
+    border-color: transparent !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .form-locked #questionsContainer .add-row,
+  .form-locked #questionsContainer .pm-add {
+    display: none !important;
+  }
+  .form-locked .q-section {
+    opacity: 0.88;
+  }
+  .form-locked .targets-card {
+    opacity: 0.88;
+  }
 </style>
 </head>
 <body>
@@ -521,10 +595,13 @@
     </div>
   </div>
 
+  <div id="weekPlanCard"></div>
+
   <div id="questionsContainer"></div>
 
   <div class="save-row">
     <div class="saved-info" id="savedInfo">Not saved yet</div>
+    <button class="btn-secondary" id="editBtn" style="display:none">Edit review</button>
     <button class="btn-primary" id="saveBtn">Save review</button>
   </div>
 
@@ -756,6 +833,65 @@ function parseGoalsValue(value) {
 }
 
 const PRIORITY_CATS = ['Work', 'Growth and Learning', 'Joyful Pursuits', 'Health', 'Family'];
+const CAT_COLORS = {
+  'Work':                '#1f5f5f',
+  'Growth and Learning': '#2d5a3d',
+  'Joyful Pursuits':     '#c89a3a',
+  'Health':              '#7a2030',
+  'Family':              '#3f51b5',
+};
+
+// ---------- View / Edit mode ----------
+function enterViewMode() {
+  document.body.classList.add('form-locked');
+  document.getElementById('saveBtn').style.display = 'none';
+  document.getElementById('editBtn').style.display = '';
+  renderWeekPlanCard();
+}
+
+function enterEditMode() {
+  document.body.classList.remove('form-locked');
+  document.getElementById('saveBtn').style.display = '';
+  document.getElementById('editBtn').style.display = 'none';
+  document.getElementById('weekPlanCard').style.display = 'none';
+}
+
+function renderWeekPlanCard() {
+  const card = document.getElementById('weekPlanCard');
+  if (!currentReview || !currentReview.next_priorities) {
+    card.style.display = 'none';
+    return;
+  }
+  let matrix = {};
+  try { matrix = JSON.parse(currentReview.next_priorities); } catch {}
+  const activeCats = PRIORITY_CATS.filter(c => (matrix[c] || []).filter(Boolean).length > 0);
+  if (activeCats.length === 0) { card.style.display = 'none'; return; }
+
+  card.style.display = '';
+  card.innerHTML = `
+    <div class="wpc-head">
+      <div>
+        <div class="wpc-title">📋 This week's plan</div>
+        <div class="wpc-sub">${weekRangeLabel(currentSunday)} — your priorities for the week</div>
+      </div>
+    </div>
+    <div class="wpc-grid">
+      ${activeCats.map(cat => `
+        <div>
+          <div class="wpc-col-head" style="background:${CAT_COLORS[cat]}">${cat}</div>
+          <div class="wpc-col-body">
+            ${(matrix[cat] || []).filter(Boolean).map(item => `
+              <div class="wpc-item">
+                <span class="wpc-dot">•</span>
+                <span class="wpc-text">${item}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
 
 function parseMatrixValue(value) {
   if (!value) return {};
@@ -923,8 +1059,10 @@ async function loadReview(sundayDate) {
   if (data) {
     const updated = new Date(data.updated_at || data.created_at);
     info.textContent = `Saved ${updated.toLocaleString()}`;
+    enterViewMode(); // existing review → lock and show week plan
   } else {
     info.textContent = 'Not saved yet';
+    enterEditMode(); // new / unsaved week → open in edit mode
     // Brand-new week: try to prefill Q2 from last week's Q6, and pull last week's targets too
     await prefillGoalsFromLastWeek(sundayDate);
     await prefillTargetsFromLastWeek(sundayDate);
@@ -1013,6 +1151,7 @@ async function saveReview() {
   document.getElementById('savedInfo').textContent = `Saved ${new Date().toLocaleString()}`;
   showBanner('Review saved.', 'success');
   if (data) fillAnswers(data);
+  enterViewMode(); // lock form and show this week's plan card
   loadPastReviews();
   loadPostponedProjects();
   loadCompletedArchive();
@@ -1303,6 +1442,7 @@ document.getElementById('thisWeekBtn').addEventListener('click', () => {
   loadSchedule(currentSunday);
 });
 document.getElementById('saveBtn').addEventListener('click', saveReview);
+document.getElementById('editBtn').addEventListener('click', enterEditMode);
 
 // "+ add" button inside priority matrix columns
 document.addEventListener('click', (e) => {
