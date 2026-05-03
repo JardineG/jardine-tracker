@@ -561,7 +561,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ---------- The 6 questions ----------
 const QUESTIONS = [
   { key: 'wins',             title: 'Wins',                                  hint: 'what went well this week',                                       type: 'list'  },
-  { key: 'goals_last_week',  title: 'Priorities from last week → what happened', hint: 'each row: the priority, its status, and what actually happened', type: 'goals' },
+  { key: 'goals_last_week',  title: 'Priorities from last week → what happened', hint: 'each row: the priority, its status, and which life area it belongs to', type: 'goals' },
   { key: 'obstacles_stops',  title: 'What got in the way & what to stop',    hint: 'obstacles, frustrations, patterns to break',                     type: 'text'  },
   { key: 'lessons',          title: 'Lessons',                               hint: 'what did I learn from all of the above?',                        type: 'text'  },
   { key: 'next_priorities',  title: 'Top priorities for next week',           hint: 'enter priorities by life area — Work · Growth · Joy · Health · Family', type: 'matrix' },
@@ -978,7 +978,7 @@ async function prefillGoalsFromLastWeek(sundayDate) {
 
   const note = document.querySelector('.prefill-note[data-key="goals_last_week"]');
   if (note) {
-    note.textContent = `↑ pulled in from last week's priorities — set status & fill in outcomes`;
+    note.textContent = `↑ pulled in from last week's priorities — set the status for each one`;
     note.classList.add('show');
   }
 }
@@ -1012,6 +1012,7 @@ async function saveReview() {
   currentReview = data;
   document.getElementById('savedInfo').textContent = `Saved ${new Date().toLocaleString()}`;
   showBanner('Review saved.', 'success');
+  if (data) fillAnswers(data);
   loadPastReviews();
   loadPostponedProjects();
   loadCompletedArchive();
