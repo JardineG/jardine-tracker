@@ -96,8 +96,15 @@
   .ov-goal-row {
     display: flex; align-items: center; gap: 8px;
     padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 13px;
+    cursor: grab; user-select: none; transition: opacity 0.15s, background 0.1s;
   }
   .ov-goal-row:last-child { border-bottom: none; }
+  .ov-goal-row:hover { background: #ede8d0; }
+  .ov-goal-row.dragging { opacity: 0.35; cursor: grabbing; }
+  .ov-drag-handle {
+    color: #bbb; font-size: 13px; flex-shrink: 0; line-height: 1;
+    cursor: grab;
+  }
   .ov-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .ov-dot[data-s="not_started"] { background: #9ca3af; }
   .ov-dot[data-s="in_progress"] { background: #4A8FD4; }
@@ -114,6 +121,17 @@
   .ov-empty {
     padding: 20px 14px; color: var(--muted); font-style: italic; font-size: 12px;
   }
+  /* Drop target highlight */
+  .ov-quadrant.drag-over {
+    outline: 2px dashed var(--gold);
+    outline-offset: -2px;
+    background: #f5f0e0;
+  }
+  .ov-drop-hint {
+    display: none; padding: 10px 14px; text-align: center;
+    font-size: 11px; color: var(--muted); font-style: italic;
+  }
+  .ov-quadrant.drag-over .ov-drop-hint { display: block; }
 
   /* Category block */
   .cat-block { margin-bottom: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
@@ -452,12 +470,14 @@ function renderOverview() {
     const cats = Object.keys(qGoals).filter(c => qGoals[c] && qGoals[c].length > 0);
     let inner = '';
     if (cats.length === 0) {
-      inner = `<div class="ov-empty">No goals yet</div>`;
+      inner = `<div class="ov-empty">Drop goals here or add them in edit mode</div>`;
     } else {
       cats.forEach(cat => {
         inner += `<div class="ov-cat-label ${CAT_CLASS[cat] || ''}">${cat}</div>`;
-        (qGoals[cat] || []).forEach(item => {
-          inner += `<div class="ov-goal-row">
+        (qGoals[cat] || []).forEach((item, i) => {
+          inner += `<div class="ov-goal-row" draggable="true"
+              data-q="${q}" data-cat="${cat}" data-idx="${i}">
+            <span class="ov-drag-handle">⠿</span>
             <span class="ov-dot" data-s="${item.status}"></span>
             <span class="ov-text">${item.text}</span>
             <span class="ov-pill ${item.status}">${STATUS_OPTIONS.find(o=>o.value===item.status)?.label || item.status}</span>
@@ -465,11 +485,65 @@ function renderOverview() {
         });
       });
     }
-    return `<div class="ov-quadrant">
+    return `<div class="ov-quadrant" data-drop-q="${q}">
       <div class="ov-q-head ${q}">${Q_LABELS[q]}</div>
       ${inner}
+      <div class="ov-drop-hint">Drop here to move to ${Q_LABELS[q]}</div>
     </div>`;
   }).join('');
+
+  bindOverviewDrag();
+}
+
+// ---------- Overview drag-and-drop ----------
+let dragPayload = null; // { q, cat, idx }
+
+function bindOverviewDrag() {
+  // Draggable rows
+  document.querySelectorAll('.ov-goal-row[draggable]').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragPayload = { q: row.dataset.q, cat: row.dataset.cat, idx: parseInt(row.dataset.idx) };
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', JSON.stringify(dragPayload));
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.ov-quadrant').forEach(q => q.classList.remove('drag-over'));
+    });
+  });
+
+  // Drop targets (quadrants)
+  document.querySelectorAll('.ov-quadrant[data-drop-q]').forEach(quad => {
+    quad.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.ov-quadrant').forEach(q => q.classList.remove('drag-over'));
+      quad.classList.add('drag-over');
+    });
+    quad.addEventListener('dragleave', e => {
+      // Only remove if leaving the quadrant entirely (not just child elements)
+      if (!quad.contains(e.relatedTarget)) quad.classList.remove('drag-over');
+    });
+    quad.addEventListener('drop', e => {
+      e.preventDefault();
+      quad.classList.remove('drag-over');
+      const toQ = quad.dataset.dropQ;
+      if (!dragPayload || dragPayload.q === toQ) return;
+      const { q: fromQ, cat, idx } = dragPayload;
+      if (!goals[fromQ]?.[cat]) return;
+      const item = goals[fromQ][cat].splice(idx, 1)[0];
+      if (!item) return;
+      if (goals[fromQ][cat].length === 0) delete goals[fromQ][cat];
+      if (!goals[toQ]) goals[toQ] = {};
+      if (!goals[toQ][cat]) goals[toQ][cat] = [];
+      goals[toQ][cat].push(item);
+      persistGoals();
+      renderAll();
+      showBanner(`Moved "${item.text}" to ${Q_LABELS[toQ]}`, 'success');
+      dragPayload = null;
+    });
+  });
 }
 
 // ---------- Render: Quarter ----------
