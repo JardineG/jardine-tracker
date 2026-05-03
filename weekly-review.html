@@ -242,7 +242,7 @@
   .q-goals { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
   .goal-row {
     display: grid;
-    grid-template-columns: 22px minmax(150px, 1fr) 130px minmax(150px, 1.4fr);
+    grid-template-columns: 22px minmax(160px, 1.6fr) 130px 110px;
     gap: 8px;
     align-items: start;
   }
@@ -250,6 +250,12 @@
     font-weight: 800; color: var(--gold); font-size: 14px; text-align: right;
     padding-top: 10px;
   }
+  .goal-cat {
+    padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 12px; font-family: inherit; background: #fff; cursor: pointer;
+    color: var(--muted); font-weight: 600; min-height: 38px;
+  }
+  .goal-cat:focus { outline: none; border-color: var(--gold); }
   .goal-status {
     padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px;
     font-size: 13px; font-family: inherit; background: #fff; cursor: pointer;
@@ -257,10 +263,36 @@
     min-height: 38px;
   }
   .goal-status:focus { outline: none; border-color: var(--gold); }
-  .goal-status[data-value="done"]       { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+  .goal-status[data-value="completed"] { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+  .goal-status[data-value="done"]      { background: var(--green-soft); color: var(--green); border-color: var(--green); }
   .goal-status[data-value="incomplete"] { background: var(--red-soft);   color: var(--red);   border-color: var(--red); }
   .goal-status[data-value="postponed"]  { background: #fdf2d8;           color: var(--gold);  border-color: var(--gold); }
   .goal-status[data-value="killed"]     { background: var(--bg);         color: var(--muted); border-color: var(--line); }
+
+  /* Completed archive */
+  .archive-section { margin-top: 40px; }
+  .archive-head {
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; margin-bottom: 12px;
+  }
+  .archive-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .archive-table th {
+    text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--gold);
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted);
+  }
+  .archive-table td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .archive-table tr:last-child td { border-bottom: none; }
+  .archive-table tr:hover td { background: var(--bg); }
+  .archive-cat-pill {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+    padding: 2px 8px; border-radius: 20px; text-transform: uppercase; color: #fff;
+  }
+  .archive-cat-pill.Work                { background: #1f5f5f; }
+  .archive-cat-pill.Growth              { background: #2d5a3d; }
+  .archive-cat-pill.Joy                 { background: #c89a3a; }
+  .archive-cat-pill.Health              { background: #7a2030; }
+  .archive-cat-pill.Family              { background: #3f51b5; }
+  .archive-cat-pill.General             { background: #6b7280; }
 
   /* Priority matrix (Q5) */
   .priority-matrix {
@@ -507,6 +539,11 @@
   <div class="past-section">
     <div class="past-head">Past reviews</div>
     <div id="pastList"></div>
+
+  <div class="archive-section">
+    <div class="archive-head">Completed priorities archive</div>
+    <div id="archiveList"></div>
+  </div>
   </div>
 
   <div class="footer">
@@ -532,11 +569,12 @@ const QUESTIONS = [
 const MIN_LIST_ROWS = 3;
 const STATUS_OPTIONS = [
   { value: 'not_started', label: 'not started' },
-  { value: 'done',        label: 'done' },
+  { value: 'completed',   label: 'completed' },
   { value: 'incomplete',  label: 'incomplete' },
   { value: 'postponed',   label: 'postponed' },
   { value: 'killed',      label: 'killed' },
 ];
+const CAT_OPTIONS = ['Work', 'Growth and Learning', 'Joyful Pursuits', 'Health', 'Family', '—'];
 
 // ---------- Week math ----------
 // A "week" here is the week ENDING on Sunday (the day the review fires).
@@ -668,7 +706,7 @@ function setListRows(key, values) {
   autoGrowAll(container);
 }
 
-// Build N goal-rows for the Q2 "goals + status + outcome" question.
+// Build N goal-rows for Q2: priority name | status | category (no outcome)
 function setGoalRows(key, goalObjects) {
   const container = document.querySelector(`.q-goals[data-key="${key}"]`);
   if (!container) return;
@@ -676,22 +714,27 @@ function setGoalRows(key, goalObjects) {
   const numRows = Math.max(items.length, MIN_LIST_ROWS);
   container.innerHTML = '';
   for (let i = 0; i < numRows; i++) {
-    const item = items[i] || { goal: '', status: 'not_started', outcome: '' };
+    const item = items[i] || { goal: '', status: 'not_started', category: '' };
     const row = document.createElement('div');
     row.className = 'goal-row';
+    // Normalise legacy "done" → "completed"
+    const status = item.status === 'done' ? 'completed' : (item.status || 'not_started');
     row.innerHTML = `
       <span class="num">${i + 1}.</span>
-      <textarea class="auto-grow goal-input" rows="1" placeholder="Priority..."></textarea>
+      <textarea class="auto-grow goal-input" rows="1" placeholder="Priority…"></textarea>
       <select class="goal-status">
         ${STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
       </select>
-      <textarea class="auto-grow goal-outcome" rows="1" placeholder="What actually happened?"></textarea>
+      <select class="goal-cat">
+        ${CAT_OPTIONS.map(c => `<option value="${c}">${c}</option>`).join('')}
+      </select>
     `;
     row.querySelector('.goal-input').value = item.goal || '';
     const sel = row.querySelector('.goal-status');
-    sel.value = item.status || 'not_started';
-    sel.dataset.value = sel.value;
-    row.querySelector('.goal-outcome').value = item.outcome || '';
+    sel.value = status;
+    sel.dataset.value = status;
+    const catSel = row.querySelector('.goal-cat');
+    catSel.value = item.category || '—';
     container.appendChild(row);
   }
   autoGrowAll(container);
@@ -703,10 +746,13 @@ function parseGoalsValue(value) {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed)) return parsed.map(g => ({
+      ...g,
+      status: g.status === 'done' ? 'completed' : g.status,
+    }));
   } catch {}
   return value.split('\n').map(s => s.trim()).filter(Boolean)
-    .map(g => ({ goal: g, status: 'not_started', outcome: '' }));
+    .map(g => ({ goal: g, status: 'not_started', category: '' }));
 }
 
 const PRIORITY_CATS = ['Work', 'Growth and Learning', 'Joyful Pursuits', 'Health', 'Family'];
@@ -790,10 +836,10 @@ function collectAnswers() {
     } else if (q.type === 'goals') {
       const rows = document.querySelectorAll(`.q-goals[data-key="${q.key}"] .goal-row`);
       const items = Array.from(rows).map(r => ({
-        goal:    r.querySelector('.goal-input').value.trim(),
-        status:  r.querySelector('.goal-status').value,
-        outcome: r.querySelector('.goal-outcome').value.trim(),
-      })).filter(r => r.goal || r.outcome); // drop fully empty rows
+        goal:     r.querySelector('.goal-input').value.trim(),
+        status:   r.querySelector('.goal-status').value,
+        category: r.querySelector('.goal-cat')?.value || '',
+      })).filter(r => r.goal);
       out[q.key] = items.length ? JSON.stringify(items) : '';
     } else {
       const el = document.querySelector(`textarea[data-key="${q.key}"]`);
@@ -910,11 +956,24 @@ async function prefillGoalsFromLastWeek(sundayDate) {
 
   if (error || !data || !data.next_priorities) return;
 
-  const items = data.next_priorities.split('\n').map(s => s.trim()).filter(Boolean);
-  if (items.length === 0) return;
+  // Parse new matrix format { "Work": ["item",...], ... } or legacy newline list
+  let goals = [];
+  try {
+    const matrix = JSON.parse(data.next_priorities);
+    if (matrix && typeof matrix === 'object' && !Array.isArray(matrix)) {
+      PRIORITY_CATS.forEach(cat => {
+        (matrix[cat] || []).filter(Boolean).forEach(g => {
+          goals.push({ goal: g, status: 'not_started', category: cat });
+        });
+      });
+    }
+  } catch {}
+  if (goals.length === 0) {
+    goals = data.next_priorities.split('\n').map(s => s.trim()).filter(Boolean)
+      .map(g => ({ goal: g, status: 'not_started', category: '' }));
+  }
+  if (goals.length === 0) return;
 
-  // Convert each priority into a goal-row with default status "not_started"
-  const goals = items.map(g => ({ goal: g, status: 'not_started', outcome: '' }));
   setGoalRows('goals_last_week', goals);
 
   const note = document.querySelector('.prefill-note[data-key="goals_last_week"]');
@@ -955,6 +1014,7 @@ async function saveReview() {
   showBanner('Review saved.', 'success');
   loadPastReviews();
   loadPostponedProjects();
+  loadCompletedArchive();
 }
 
 // ---------- Week-ahead schedule (snapshot from Google Calendar) ----------
@@ -1174,6 +1234,55 @@ async function loadPastReviews() {
   });
 }
 
+// ---------- Completed archive ----------
+async function loadCompletedArchive() {
+  const el = document.getElementById('archiveList');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:12px;">Loading…</div>';
+
+  const { data, error } = await sb
+    .from('weekly_reviews')
+    .select('week_ending, goals_last_week')
+    .order('week_ending', { ascending: false });
+
+  if (error || !data) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;">Could not load.</div>';
+    return;
+  }
+
+  const rows = [];
+  data.forEach(r => {
+    const sunday = new Date(r.week_ending + 'T00:00:00');
+    const weekLabel = weekRangeLabel(sunday);
+    let goals = [];
+    try {
+      const parsed = JSON.parse(r.goals_last_week || '');
+      if (Array.isArray(parsed)) goals = parsed;
+    } catch {}
+    goals.filter(g => g.goal && (g.status === 'completed' || g.status === 'done')).forEach(g => {
+      const cat = g.category || '';
+      const catKey = cat === 'Growth and Learning' ? 'Growth' : cat === 'Joyful Pursuits' ? 'Joy' : cat || 'General';
+      rows.push({ goal: g.goal, cat, catKey, week: weekLabel });
+    });
+  });
+
+  if (rows.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">No completed priorities yet — they appear here once marked completed in Q2.</div>';
+    return;
+  }
+
+  el.innerHTML = `<table class="archive-table">
+    <thead><tr><th>Priority</th><th>Area</th><th>Week completed</th></tr></thead>
+    <tbody>
+      ${rows.map(r => `<tr>
+        <td>${escapeHtml(r.goal)}</td>
+        <td>${r.catKey !== 'General' ? `<span class="archive-cat-pill ${r.catKey}">${escapeHtml(r.cat)}</span>` : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
+        <td style="color:var(--muted);font-size:12px;">${r.week}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
 // ---------- Wire up ----------
 document.getElementById('prevWeek').addEventListener('click', () => {
   currentSunday.setDate(currentSunday.getDate() - 7);
@@ -1349,6 +1458,7 @@ loadReview(currentSunday);
 loadSchedule(currentSunday);
 loadPastReviews();
 loadPostponedProjects();
+loadCompletedArchive();
 </script>
 </body>
 </html>
