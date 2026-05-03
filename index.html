@@ -68,6 +68,7 @@
   .day-row:last-child { border-bottom: 0; }
   .day-row:hover { background: var(--bg); }
   .day-row .name { flex: 1; font-size: 15px; font-weight: 500; }
+  .habit-hint { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 2px; font-weight: 400; }
   .day-row .streak { font-size: 12px; color: var(--muted); font-weight: 600; min-width: 50px; text-align: right; }
   .day-row .streak .fire { color: var(--gold); margin-right: 2px; }
   .day-row .control { flex-shrink: 0; min-width: 100px; display: flex; justify-content: flex-end; }
@@ -819,17 +820,21 @@ const morningHabits = [
   { id: 'starter', name: 'Starter Activation Declaration', type: 'check' },
   { id: 'meditate', name: 'Meditate', type: 'check' },
   { id: 'journal', name: 'Journal', type: 'check' },
+  { id: 'head_to_heart', name: 'Head to Heart Exercise', type: 'check' },
   { id: 'read', name: 'Read (30+ min)', type: 'check' },
   { id: 'protein_shake', name: 'Protein shake', type: 'check' },
+  { id: 'tft_tapping', name: 'TFT Tapping', type: 'check' },
   { id: 'lesson', name: 'Online lesson', type: 'check' },
   { id: 'no_social', name: 'No social media', type: 'check' },
   { id: 'weight', name: 'Weight (lbs)', type: 'number', unit: 'lbs' },
   { id: 'walk6k', name: 'Morning Steps Target', type: 'number', unit: 'steps', target: 6000 },
 ];
 const eveningHabits = [
+  { id: 'system_relax', name: 'System Relaxation', type: 'check' },
   { id: 'fiction', name: 'Read fiction', type: 'check' },
   { id: 'evening_journal', name: 'Evening journal', type: 'check' },
   { id: 'homecoming', name: 'Homecoming Declaration', type: 'check' },
+  { id: 'havening', name: 'Havening Therapy', type: 'check' },
   { id: 'walk12k', name: 'Total Steps', type: 'number', unit: 'steps', target: 12000 },
   { id: 'calorie_goal', name: 'Total Calories', type: 'number', unit: 'cal' },
   { id: 'protein_goal', name: 'Total Protein', type: 'number', unit: 'g' },
@@ -1490,7 +1495,7 @@ function renderGrid(wrapId, habits, sectionType) {
         control = `<div class="circle ${done?'done':''} ${isFuture?'future':''}" data-date="${ds}" data-habit="${h.id}"></div>`;
       }
       html += `<div class="day-row">
-        <div class="name">${h.name}</div>
+        <div class="name">${h.name}${h.hint ? `<div class="habit-hint">${h.hint}</div>` : ''}</div>
         <div class="streak">${dayStreakHtml}</div>
         <div class="control">${control}</div>
       </div>`;
