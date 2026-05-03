@@ -588,6 +588,58 @@
   #gepInput:focus { border-color: var(--gold); }
   .gep-hint { font-size: 10px; color: var(--muted); text-align: center; margin-top: 6px; letter-spacing: 0.3px; }
 
+  /* Weekly Priorities card */
+  .wp-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; margin-bottom: 16px;
+  }
+  .wp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--line);
+  }
+  .wp-title {
+    font-size: 10px; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--teal);
+  }
+  .wp-link {
+    font-size: 11px; color: var(--gold); text-decoration: none; font-weight: 700;
+  }
+  .wp-list { padding: 4px 0; }
+  .wp-row {
+    display: grid; grid-template-columns: 20px 1fr auto auto;
+    align-items: center; gap: 8px 10px;
+    padding: 8px 14px; border-bottom: 1px solid var(--line);
+  }
+  .wp-row:last-child { border-bottom: none; }
+  .wp-num { font-weight: 800; color: var(--gold); font-size: 13px; text-align: right; }
+  .wp-text { font-size: 13px; color: var(--ink); line-height: 1.4; }
+  .wp-cat {
+    display: inline-block; padding: 3px 9px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: #fff;
+    white-space: nowrap;
+  }
+  .wp-cat[data-cat="Work"]                { background: #4A8FD4; }
+  .wp-cat[data-cat="Growth and Learning"] { background: #1A4A2A; }
+  .wp-cat[data-cat="Joyful Pursuits"]     { background: #C2A040; }
+  .wp-cat[data-cat="Health"]              { background: #8C1A2C; }
+  .wp-cat[data-cat="Family"]              { background: #196878; }
+  .wp-cat[data-cat="—"],
+  .wp-cat:not([data-cat])                 { background: #9ca3af; }
+  .wp-status {
+    padding: 3px 9px; border-radius: 20px; border: none;
+    font-size: 10px; font-family: inherit; font-weight: 700;
+    cursor: pointer; -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='rgba(0,0,0,0.25)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 6px center;
+    padding-right: 18px;
+  }
+  .wp-status[data-value="not_started"] { background-color: #e5e7eb; color: #374151; }
+  .wp-status[data-value="completed"]   { background-color: #D0E8D4; color: #1A4A2A; }
+  .wp-status[data-value="incomplete"]  { background-color: #EED4D8; color: #8C1A2C; }
+  .wp-status[data-value="postponed"]   { background-color: #F0E8C8; color: #8a6a1a; }
+  .wp-status[data-value="killed"]      { background-color: #f3f4f6; color: #9ca3af; }
+  .wp-empty { padding: 14px; font-size: 13px; color: var(--muted); font-style: italic; text-align: center; }
+
   /* Dashboard (Overview tab) */
   .dash-toolbar {
     display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
@@ -702,6 +754,15 @@
 
   <!-- Tracker container (hidden in overview mode) -->
   <div id="trackerView">
+
+  <!-- Weekly Priorities -->
+  <div class="wp-card" id="weeklyPrioritiesCard">
+    <div class="wp-head">
+      <div class="wp-title">📋 This week's priorities</div>
+      <a class="wp-link" href="weekly-review.html">Weekly Review →</a>
+    </div>
+    <div class="wp-list" id="wpList"><div class="wp-empty">Loading…</div></div>
+  </div>
 
   <!-- Morning -->
   <div class="section morning">
@@ -2136,6 +2197,88 @@ async function loadWeeklyTargetsFromReview() {
   }
 }
 
+// ---------- This Week's Priorities card ----------
+const STATUS_OPTIONS_WP = [
+  { value: 'not_started', label: 'not started' },
+  { value: 'completed',   label: 'completed' },
+  { value: 'incomplete',  label: 'incomplete' },
+  { value: 'postponed',   label: 'postponed' },
+  { value: 'killed',      label: 'killed' },
+];
+
+let wpGoals = []; // cached goal list for this week
+let wpWeekEnding = ''; // the week_ending key for the loaded priorities
+
+function sundayOfDate(d) {
+  const day = new Date(d);
+  day.setDate(day.getDate() - day.getDay());
+  return day.toISOString().slice(0, 10);
+}
+
+async function loadWeeklyPriorities() {
+  const list = document.getElementById('wpList');
+  if (!list) return;
+  wpWeekEnding = sundayOfDate(new Date());
+  try {
+    const { data, error } = await sb
+      .from('weekly_reviews')
+      .select('goals_last_week')
+      .eq('week_ending', wpWeekEnding)
+      .maybeSingle();
+    if (error || !data || !data.goals_last_week) {
+      list.innerHTML = '<div class="wp-empty">No priorities set for this week yet — <a href="weekly-review.html" style="color:var(--gold);font-weight:700;">go to Weekly Review →</a></div>';
+      return;
+    }
+    try { wpGoals = JSON.parse(data.goals_last_week); } catch { wpGoals = []; }
+    renderWpList();
+  } catch (e) {
+    list.innerHTML = '<div class="wp-empty">Could not load priorities.</div>';
+  }
+}
+
+function renderWpList() {
+  const list = document.getElementById('wpList');
+  if (!list) return;
+  const goals = wpGoals.filter(g => g.goal && g.goal.trim());
+  if (goals.length === 0) {
+    list.innerHTML = '<div class="wp-empty">No priorities this week yet.</div>';
+    return;
+  }
+  list.innerHTML = goals.map((g, i) => {
+    const cat = g.category || '—';
+    const status = g.status || 'not_started';
+    const opts = STATUS_OPTIONS_WP.map(o =>
+      `<option value="${o.value}"${o.value === status ? ' selected' : ''}>${o.label}</option>`
+    ).join('');
+    return `<div class="wp-row" data-idx="${i}">
+      <span class="wp-num">${i + 1}.</span>
+      <span class="wp-text">${g.goal}</span>
+      <span class="wp-cat" data-cat="${cat}">${cat}</span>
+      <select class="wp-status" data-value="${status}" data-idx="${i}">${opts}</select>
+    </div>`;
+  }).join('');
+}
+
+async function saveWpStatus(idx, newStatus) {
+  if (!wpGoals[idx]) return;
+  wpGoals[idx].status = newStatus;
+  // Save updated goals back to Supabase
+  try {
+    await sb.from('weekly_reviews')
+      .update({ goals_last_week: JSON.stringify(wpGoals), updated_at: new Date().toISOString() })
+      .eq('week_ending', wpWeekEnding);
+  } catch (e) { /* fail silently */ }
+}
+
+// Wire up status change on the priorities card
+document.addEventListener('change', (e) => {
+  if (!e.target.classList.contains('wp-status')) return;
+  const idx = parseInt(e.target.dataset.idx);
+  const val = e.target.value;
+  e.target.dataset.value = val;
+  saveWpStatus(idx, val);
+});
+
 function renderAll() {
   renderHeader();
   // Toggle tracker vs overview
@@ -2634,6 +2777,7 @@ if (AUTH_ENABLED) {
     try { await pullStateFromCloud(); } catch(e) { console.error('Cloud pull error:', e); }
     renderAll();
     loadWeeklyTargetsFromReview();
+    loadWeeklyPriorities();
     fetchHealthSync();
   }
 
@@ -2661,6 +2805,7 @@ if (AUTH_ENABLED) {
   // Demo / local-only mode — no login, no cloud. Each visitor gets their own empty tracker.
   renderAll();
   loadWeeklyTargetsFromReview();
+  loadWeeklyPriorities();
   fetchHealthSync();
 }
 
