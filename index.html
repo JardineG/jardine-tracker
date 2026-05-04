@@ -2872,16 +2872,25 @@ const HEALTH_SYNC_MAP = {
 
 async function fetchHealthSync() {
   const today = ymd(new Date());
+  // Fetch last 14 days so past days in the tracker get backfilled too
+  const since = ymd(new Date(Date.now() - 14 * 24 * 60 * 60 * 1000));
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/health_syncs?date=eq.${today}&select=*`,
+      `${SUPABASE_URL}/rest/v1/health_syncs?date=gte.${since}&date=lte.${today}&select=*&order=date.desc`,
       { headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' } }
     );
     const rows = await res.json();
     if (!rows || !rows.length) return;
-    const h = rows[0];
-    renderHealthCard(h, today);
-    prefillFromHealth(h, today);
+
+    let anyChanged = false;
+    rows.forEach(h => {
+      const dateStr = h.date;
+      // Show health card for today's entry
+      if (dateStr === today) renderHealthCard(h, today);
+      // Backfill all days
+      anyChanged = prefillFromHealth(h, dateStr) || anyChanged;
+    });
+    if (anyChanged) renderAll();
   } catch (e) {
     console.warn('Health sync fetch failed:', e);
   }
@@ -2916,7 +2925,7 @@ function renderHealthCard(h, today) {
   card.classList.add('show');
 }
 
-function prefillFromHealth(h, today) {
+function prefillFromHealth(h, dateStr) {
   // Always sync from HealthKit — health data is the source of truth.
   // Manual overrides are visible in the health card as "overridden".
   let changed = false;
@@ -2924,13 +2933,14 @@ function prefillFromHealth(h, today) {
     const val = h[healthKey];
     if (val == null) continue;
     const rounded = Math.round(val);
-    if (!state.daily[today]) state.daily[today] = {};
-    if (state.daily[today][habitId] !== rounded) {
-      state.daily[today][habitId] = rounded;
+    if (!state.daily[dateStr]) state.daily[dateStr] = {};
+    if (state.daily[dateStr][habitId] !== rounded) {
+      state.daily[dateStr][habitId] = rounded;
       changed = true;
     }
   }
-  if (changed) { save(); renderAll(); }
+  if (changed) save();
+  return changed;
 }
 
 // ---------- Daily Goals ----------
