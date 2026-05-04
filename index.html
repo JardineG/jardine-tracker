@@ -2216,11 +2216,16 @@ let wpGoals = []; // cached goal list for this week
 let wpWeekEnding = '';        // last Sunday — where next_priorities lives (source of truth)
 let wpStatusWeekEnding = '';  // this coming Sunday — where we save status updates
 
+// Use local date components to avoid UTC-conversion timezone bugs
+function localYmd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 // Last Sunday (Mon–Sun week that just ended, or today if Sunday)
 function lastSundayStr() {
   const d = new Date();
   d.setDate(d.getDate() - d.getDay()); // subtract getDay(): Mon→1, Sun→0
-  return d.toISOString().slice(0, 10);
+  return localYmd(d);
 }
 
 // This coming Sunday (end of the current Mon–Sun week)
@@ -2228,7 +2233,7 @@ function thisSundayStr() {
   const d = new Date();
   const daysLeft = (7 - d.getDay()) % 7; // 0 if already Sunday, 6 if Monday, etc.
   d.setDate(d.getDate() + daysLeft);
-  return d.toISOString().slice(0, 10);
+  return localYmd(d);
 }
 
 const WP_CATS = ['Work','Growth and Learning','Joyful Pursuits','Health','Family'];
@@ -2237,23 +2242,10 @@ async function loadWeeklyPriorities() {
   const list = document.getElementById('wpList');
   if (!list) return;
 
-  wpWeekEnding       = lastSundayStr();  // review from last week
-  wpStatusWeekEnding = thisSundayStr();  // current week (for saving status)
+  wpWeekEnding = lastSundayStr(); // the review that has next_priorities for this week
 
   try {
-    // 1. Check if this week already has status-tracked goals saved
-    const { data: curr } = await sb
-      .from('weekly_reviews')
-      .select('goals_last_week')
-      .eq('week_ending', wpStatusWeekEnding)
-      .maybeSingle();
-
-    if (curr?.goals_last_week) {
-      try { wpGoals = JSON.parse(curr.goals_last_week); } catch { wpGoals = []; }
-      if (wpGoals.length > 0) { renderWpList(); return; }
-    }
-
-    // 2. Fall back: load next_priorities from last week's review
+    // 1. Load next_priorities from last week's review
     const { data, error } = await sb
       .from('weekly_reviews')
       .select('next_priorities')
@@ -2265,7 +2257,7 @@ async function loadWeeklyPriorities() {
       return;
     }
 
-    // Parse matrix format: { "Work": ["item1", ...], "Health": [...], ... }
+    // Parse matrix format: { "Work": ["item1", ...], ... }
     wpGoals = [];
     try {
       const matrix = JSON.parse(data.next_priorities);
@@ -2277,6 +2269,38 @@ async function loadWeeklyPriorities() {
         });
       }
     } catch { wpGoals = []; }
+
+    // 2. Restore saved statuses — check localStorage first, then fall back to
+    //    the legacy Supabase record (one-time migration from old save approach)
+    let statusSource = null;
+    try {
+      const ls = localStorage.getItem(`wpStatus_${wpWeekEnding}`);
+      if (ls) statusSource = JSON.parse(ls);
+    } catch { /* ignore */ }
+
+    if (!statusSource) {
+      // Legacy: check if statuses were saved to the upcoming week's weekly_reviews record
+      try {
+        const nextSun = thisSundayStr();
+        const { data: legacy } = await sb
+          .from('weekly_reviews')
+          .select('goals_last_week')
+          .eq('week_ending', nextSun)
+          .maybeSingle();
+        if (legacy?.goals_last_week) {
+          statusSource = JSON.parse(legacy.goals_last_week);
+          // Migrate to localStorage so we stop reading from weekly_reviews
+          localStorage.setItem(`wpStatus_${wpWeekEnding}`, JSON.stringify(statusSource));
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (statusSource) {
+      wpGoals = wpGoals.map(g => {
+        const match = statusSource.find(s => s.goal === g.goal && s.category === g.category);
+        return match ? { ...g, status: match.status } : g;
+      });
+    }
 
     renderWpList();
   } catch (e) {
@@ -2307,16 +2331,13 @@ function renderWpList() {
   }).join('');
 }
 
-async function saveWpStatus(idx, newStatus) {
+function saveWpStatus(idx, newStatus) {
   if (!wpGoals[idx]) return;
   wpGoals[idx].status = newStatus;
-  // Save to the CURRENT week's record (upsert in case it doesn't exist yet)
+  // Save to localStorage keyed by the source week — no DB writes to weekly_reviews
+  // (that would create stub records that confuse the weekly review page)
   try {
-    await sb.from('weekly_reviews')
-      .upsert(
-        { week_ending: wpStatusWeekEnding, goals_last_week: JSON.stringify(wpGoals), updated_at: new Date().toISOString() },
-        { onConflict: 'week_ending' }
-      );
+    localStorage.setItem(`wpStatus_${wpWeekEnding}`, JSON.stringify(wpGoals));
   } catch (e) { /* fail silently */ }
 }
 

@@ -1024,7 +1024,11 @@ async function loadReview(sundayDate) {
   const isThisWeek = ymd(sundayOf(today)) === dateStr;
   const isSunday = today.getDay() === 0;
 
-  if (data) {
+  // A record is a "real" review only if it has actual content (wins, lessons, etc.)
+  // Stub records (created by the priorities status tracker) have empty content fields.
+  const hasRealContent = data && (data.wins || data.obstacles_stops || data.lessons || data.next_priorities);
+
+  if (hasRealContent) {
     const updated = new Date(data.updated_at || data.created_at);
     info.textContent = `Saved ${updated.toLocaleString()}`;
     // Current week on Sunday → auto-open in edit mode for grading
@@ -1035,6 +1039,7 @@ async function loadReview(sundayDate) {
     }
   } else {
     info.textContent = 'Not saved yet';
+    currentReview = null; // treat stub as no review
     enterEditMode(); // new / unsaved week → open in edit mode
     // Brand-new week: try to prefill Q2 from last week's Q6, and pull last week's targets too
     await prefillGoalsFromLastWeek(sundayDate);
