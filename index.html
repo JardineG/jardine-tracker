@@ -549,6 +549,11 @@
   .dg-del:hover { background: var(--red-soft); color: var(--red); }
   .dg-empty { font-size: 13px; color: var(--muted); font-style: italic; padding: 4px 0; }
   .dg-progress { font-size: 11px; color: var(--muted); margin-top: 8px; letter-spacing: 0.5px; }
+  .dg-carried {
+    font-size: 10px; font-weight: 700; color: var(--gold); background: #f5ead0;
+    border-radius: 10px; padding: 1px 7px; margin-left: 4px; white-space: nowrap;
+    flex-shrink: 0; margin-top: 5px; letter-spacing: 0.3px;
+  }
 
   /* Month-view compact chips (replace inputs that overflow narrow cells) */
   .grid-chip {
@@ -878,6 +883,7 @@ function ensureStateShape() {
   if (!state.weeklyGoals) state.weeklyGoals = {}; // { 'YYYY-Www': { protein, calorie } }
   if (!state.profile) state.profile = {};
   if (!state.profile.birthday) state.profile.birthday = '1975-10-14';
+  if (!state.meta) state.meta = {};
   backfillHealthData();
   backfillWeeklyGoals();
 }
@@ -2846,6 +2852,7 @@ if (AUTH_ENABLED) {
     currentUser = user;
     hideAuth();
     try { await pullStateFromCloud(); } catch(e) { console.error('Cloud pull error:', e); }
+    carryOverUnfinishedGoals();
     renderAll();
     loadWeeklyTargetsFromReview();
     loadWeeklyPriorities();
@@ -2874,6 +2881,7 @@ if (AUTH_ENABLED) {
   })();
 } else {
   // Demo / local-only mode — no login, no cloud. Each visitor gets their own empty tracker.
+  carryOverUnfinishedGoals();
   renderAll();
   loadWeeklyTargetsFromReview();
   loadWeeklyPriorities();
@@ -2980,6 +2988,41 @@ function saveDailyGoals(dateStr, goals) {
   save();
 }
 
+// Carry unchecked goals from the previous day into today (runs once per calendar day)
+function carryOverUnfinishedGoals() {
+  const today = ymd(new Date());
+  const yesterday = ymd(addDays(new Date(), -1));
+
+  // Only carry if we haven't already done this today
+  const lastCarry = (state.meta && state.meta.lastCarryDate);
+  if (lastCarry === today) return;
+
+  const prevGoals = getDailyGoals(yesterday);
+  const unfinished = prevGoals.filter(g => g.text.trim() && !g.done);
+  if (unfinished.length === 0) {
+    // Mark as done for today even if nothing to carry
+    if (!state.meta) state.meta = {};
+    state.meta.lastCarryDate = today;
+    save();
+    return;
+  }
+
+  const todayGoals = getDailyGoals(today);
+  let added = false;
+  unfinished.forEach(g => {
+    const alreadyThere = todayGoals.some(t => t.text.trim() === g.text.trim());
+    if (!alreadyThere) {
+      todayGoals.push({ text: g.text, done: false, carriedOver: true });
+      added = true;
+    }
+  });
+
+  if (!state.meta) state.meta = {};
+  state.meta.lastCarryDate = today;
+  if (added) saveDailyGoals(today, todayGoals);
+  else save();
+}
+
 function renderDailyGoals(focusIdx) {
   const el = document.getElementById('dailyGoalsSection');
   if (!el) return;
@@ -3003,6 +3046,7 @@ function renderDailyGoals(focusIdx) {
       <div class="dg-check ${!g.text ? 'dg-check-empty' : ''}" data-action="toggle" data-idx="${i}">${g.done && g.text ? '✓' : ''}</div>
       <textarea class="dg-row-input" data-idx="${i}" rows="1"
         placeholder="Goal ${i + 1}…" maxlength="300">${g.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+      ${g.carriedOver && !g.done ? '<span class="dg-carried">↩ carried</span>' : ''}
       <button class="dg-del" data-action="delete" data-idx="${i}" ${!g.text ? 'style="opacity:0;pointer-events:none"' : ''}>×</button>
     </div>`).join('');
 
@@ -3044,7 +3088,8 @@ function renderDailyGoals(focusIdx) {
     inputs.forEach((inp, i) => {
       const text = inp.value.trim();
       const wasDone = rows[i] ? rows[i].done : false;
-      if (text) updated.push({ text, done: wasDone });
+      const wasCarried = rows[i] ? rows[i].carriedOver : false;
+      if (text) updated.push({ text, done: wasDone, ...(wasCarried && !wasDone ? { carriedOver: true } : {}) });
     });
     saveDailyGoals(dateStr, updated);
   }
