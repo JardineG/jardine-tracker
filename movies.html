@@ -104,6 +104,15 @@
   .btn-primary:hover { opacity: 0.92; }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  .date-toggle-btn {
+    background: none; border: 1px dashed var(--line); border-radius: 8px;
+    color: var(--muted); font-size: 12px; font-family: inherit; font-weight: 600;
+    cursor: pointer; padding: 8px 14px; white-space: nowrap;
+    letter-spacing: 0.3px; transition: border-color 0.15s, color 0.15s;
+  }
+  .date-toggle-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .date-toggle-field { justify-content: center; }
+
   /* Star rating input */
   .star-row { display: flex; gap: 2px; }
   .star {
@@ -272,9 +281,9 @@
         <div class="suggestions" id="suggestions"></div>
         <div class="hint" id="apiHint"></div>
       </div>
-      <div class="field">
-        <label for="watchedInput">Date watched</label>
-        <input id="watchedInput" type="date" />
+      <div class="field date-toggle-field">
+        <button type="button" class="date-toggle-btn" id="watchedToggle">+ Add watched date</button>
+        <input id="watchedInput" type="date" style="display:none;" />
       </div>
       <div class="field">
         <label>Rating</label>
@@ -504,6 +513,20 @@ function paintStars() {
   });
 }
 
+// ---------- Optional date toggle ----------
+(function() {
+  const btn = document.getElementById('watchedToggle');
+  const inp = document.getElementById('watchedInput');
+  btn.addEventListener('click', () => { inp.style.display = 'block'; btn.style.display = 'none'; inp.focus(); });
+  inp.addEventListener('change', () => { if (!inp.value) { inp.style.display = 'none'; btn.style.display = 'block'; } });
+})();
+
+function resetWatchedToggle() {
+  const btn = document.getElementById('watchedToggle');
+  const inp = document.getElementById('watchedInput');
+  inp.value = ''; inp.style.display = 'none'; btn.style.display = 'block';
+}
+
 // ---------- Add / delete ----------
 document.getElementById('addBtn').addEventListener('click', addMovie);
 titleInput.addEventListener('keydown', (e) => {
@@ -529,7 +552,7 @@ function addMovie() {
   save();
   // reset form
   titleInput.value = '';
-  document.getElementById('watchedInput').value = '';
+  resetWatchedToggle();
   rating = 0;
   paintStars();
   selected = null;

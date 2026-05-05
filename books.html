@@ -101,6 +101,15 @@
   .btn-primary:hover { opacity: 0.92; }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  .date-toggle-btn {
+    background: none; border: 1px dashed var(--line); border-radius: 8px;
+    color: var(--muted); font-size: 12px; font-family: inherit; font-weight: 600;
+    cursor: pointer; padding: 8px 14px; white-space: nowrap;
+    letter-spacing: 0.3px; transition: border-color 0.15s, color 0.15s;
+  }
+  .date-toggle-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .date-toggle-field { justify-content: center; }
+
   /* Autocomplete dropdown */
   .suggestions {
     position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
@@ -242,13 +251,13 @@
         <input id="titleInput" type="text" placeholder="Start typing a book title..." autocomplete="off" />
         <div class="suggestions" id="suggestions"></div>
       </div>
-      <div class="field">
-        <label for="startedInput">Date started</label>
-        <input id="startedInput" type="date" />
+      <div class="field date-toggle-field">
+        <button type="button" class="date-toggle-btn" id="startedToggle">+ Add start date</button>
+        <input id="startedInput" type="date" style="display:none;" />
       </div>
-      <div class="field">
-        <label for="finishedInput">Date finished</label>
-        <input id="finishedInput" type="date" />
+      <div class="field date-toggle-field">
+        <button type="button" class="date-toggle-btn" id="finishedToggle">+ Add finish date</button>
+        <input id="finishedInput" type="date" style="display:none;" />
       </div>
       <button class="btn-primary" id="addBtn">Add book</button>
     </div>
@@ -389,6 +398,30 @@ previewClear.addEventListener('click', () => {
   titleInput.focus();
 });
 
+// ---------- Optional date toggles ----------
+function setupDateToggle(btnId, inputId, label) {
+  const btn = document.getElementById(btnId);
+  const inp = document.getElementById(inputId);
+  btn.addEventListener('click', () => {
+    inp.style.display = 'block';
+    btn.style.display = 'none';
+    inp.focus();
+  });
+  inp.addEventListener('change', () => {
+    if (!inp.value) { inp.style.display = 'none'; btn.style.display = 'block'; }
+  });
+}
+setupDateToggle('startedToggle', 'startedInput', 'started');
+setupDateToggle('finishedToggle', 'finishedInput', 'finished');
+
+function resetDateToggle(btnId, inputId, label) {
+  const btn = document.getElementById(btnId);
+  const inp = document.getElementById(inputId);
+  inp.value = '';
+  inp.style.display = 'none';
+  btn.style.display = 'block';
+}
+
 // ---------- Add / delete ----------
 document.getElementById('addBtn').addEventListener('click', addBook);
 titleInput.addEventListener('keydown', (e) => {
@@ -414,8 +447,8 @@ function addBook() {
   save();
   // reset form
   titleInput.value = '';
-  document.getElementById('startedInput').value = '';
-  document.getElementById('finishedInput').value = '';
+  resetDateToggle('startedToggle', 'startedInput');
+  resetDateToggle('finishedToggle', 'finishedInput');
   selected = null;
   previewChip.classList.remove('show');
   render();
