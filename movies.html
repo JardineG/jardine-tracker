@@ -529,7 +529,7 @@ function addMovie() {
   save();
   // reset form
   titleInput.value = '';
-  document.getElementById('watchedInput').value = todayYmd();
+  document.getElementById('watchedInput').value = '';
   rating = 0;
   paintStars();
   selected = null;
@@ -541,7 +541,7 @@ function todayYmd() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
-document.getElementById('watchedInput').value = todayYmd();
+// date field starts empty — fill only when user picks
 
 function deleteMovie(id) {
   if (!confirm('Remove this movie?')) return;
