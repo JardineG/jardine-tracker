@@ -2986,6 +2986,40 @@ function saveDailyGoals(dateStr, goals) {
     state.daily[dateStr]._goals = goals;
   }
   save();
+  // If saving yesterday retroactively, re-sync carry-overs into today
+  const today = ymd(new Date());
+  const yesterday = ymd(addDays(new Date(), -1));
+  if (dateStr === yesterday) retroactiveCarryFromYesterday();
+}
+
+// Re-runs the carry logic for yesterday → today whenever yesterday's goals change.
+// Unlike carryOverUnfinishedGoals(), this ignores lastCarryDate so it always re-syncs.
+function retroactiveCarryFromYesterday() {
+  const today = ymd(new Date());
+  const yesterday = ymd(addDays(new Date(), -1));
+  const prevGoals = getDailyGoals(yesterday);
+
+  // Work on a copy so we can compare before/after
+  let updated = [...getDailyGoals(today)];
+
+  // 1. Add any unfinished yesterday goals not already in today
+  prevGoals.filter(g => g.text.trim() && !g.done).forEach(g => {
+    const alreadyThere = updated.some(t => t.text.trim() === g.text.trim());
+    if (!alreadyThere) updated.push({ text: g.text, done: false, carriedOver: true });
+  });
+
+  // 2. Remove carried goals that have since been marked done in yesterday
+  const doneYesterday = new Set(prevGoals.filter(g => g.done).map(g => g.text.trim()));
+  updated = updated.filter(g => !(g.carriedOver && doneYesterday.has(g.text.trim())));
+
+  // Save and re-render only if something actually changed
+  const original = JSON.stringify(getDailyGoals(today));
+  if (JSON.stringify(updated) !== original) {
+    if (!state.daily[today]) state.daily[today] = {};
+    state.daily[today]._goals = updated;
+    save();
+    renderDailyGoals();
+  }
 }
 
 // Carry unchecked goals from the previous day into today (runs once per calendar day)
