@@ -2996,8 +2996,7 @@ function saveDailyGoals(dateStr, goals) {
 // Unlike carryOverUnfinishedGoals(), this ignores lastCarryDate so it always re-syncs.
 function retroactiveCarryFromYesterday() {
   const today = ymd(new Date());
-  const yesterday = ymd(addDays(new Date(), -1));
-  const prevGoals = getDailyGoals(yesterday);
+  const prevGoals = getDailyGoals(ymd(addDays(new Date(), -1)));
 
   // Work on a copy so we can compare before/after
   let updated = [...getDailyGoals(today)];
@@ -3008,16 +3007,28 @@ function retroactiveCarryFromYesterday() {
     if (!alreadyThere) updated.push({ text: g.text, done: false, carriedOver: true });
   });
 
-  // 2. Remove carried goals that have since been marked done in yesterday
+  // 2. Remove carried goals (or any undone goals matching yesterday's now-done text)
+  //    so completed-yesterday goals don't persist in today's list
   const doneYesterday = new Set(prevGoals.filter(g => g.done).map(g => g.text.trim()));
-  updated = updated.filter(g => !(g.carriedOver && doneYesterday.has(g.text.trim())));
+  updated = updated.filter(g => {
+    if (!doneYesterday.has(g.text.trim())) return true; // keep — not done yesterday
+    if (g.done) return true;                            // keep — already done today too
+    return false;                                       // remove — done yesterday, still pending today
+  });
 
-  // Save and re-render only if something actually changed
+  // Save only if something changed
   const original = JSON.stringify(getDailyGoals(today));
   if (JSON.stringify(updated) !== original) {
     if (!state.daily[today]) state.daily[today] = {};
     state.daily[today]._goals = updated;
     save();
+  }
+
+  // Snap view back to today so the user sees the updated list
+  if (ymd(viewDate) !== today) {
+    viewDate = new Date();
+    renderAll();
+  } else {
     renderDailyGoals();
   }
 }
