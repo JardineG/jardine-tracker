@@ -951,6 +951,42 @@ function showBanner(msg, kind) {
   }
 }
 
+// Merges any Q2 incomplete items directly into the Q5 matrix data object.
+// Works on the raw review data before any DOM rendering happens.
+function mergeIncompletesIntoQ5(data) {
+  if (!data) return data;
+
+  // Parse Q2 graded goals
+  let q2Goals = [];
+  try { q2Goals = JSON.parse(data.goals_last_week || '[]'); } catch {}
+  if (!Array.isArray(q2Goals)) q2Goals = [];
+
+  const incompletes = q2Goals.filter(g =>
+    g.goal && g.goal.trim() && g.status === 'incomplete'
+  );
+  if (incompletes.length === 0) return data;
+
+  // Parse Q5 matrix
+  let matrix = {};
+  try { matrix = JSON.parse(data.next_priorities || '{}'); } catch {}
+  if (typeof matrix !== 'object' || Array.isArray(matrix)) matrix = {};
+  PRIORITY_CATS.forEach(c => { if (!matrix[c]) matrix[c] = []; });
+
+  // Add each incomplete goal to its category if not already there
+  let changed = false;
+  incompletes.forEach(g => {
+    const cat = PRIORITY_CATS.includes(g.category) ? g.category : 'Work';
+    const text = g.goal.trim();
+    if (!matrix[cat].includes(text)) {
+      matrix[cat].push(text);
+      changed = true;
+    }
+  });
+
+  if (!changed) return data;
+  return { ...data, next_priorities: JSON.stringify(matrix) };
+}
+
 // ---------- Load / save ----------
 async function loadReview(sundayDate) {
   const dateStr = ymd(sundayDate);
@@ -967,16 +1003,9 @@ async function loadReview(sundayDate) {
     return;
   }
 
-  currentReview = data;
-  fillAnswers(data);
-  fillTargets(data);
-
-  // Always sync Q2 incompletes → Q5, then refresh currentReview so the plan card shows them
-  syncQ2IncompleteToQ5();
-  if (currentReview) {
-    const updatedMatrix = collectMatrixValue('next_priorities');
-    currentReview = { ...currentReview, next_priorities: JSON.stringify(updatedMatrix) };
-  }
+  currentReview = data ? mergeIncompletesIntoQ5(data) : data;
+  fillAnswers(currentReview);
+  fillTargets(currentReview);
 
   const info = document.getElementById('savedInfo');
   const today = new Date();
