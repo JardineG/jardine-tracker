@@ -737,8 +737,7 @@ function enterEditMode() {
   document.getElementById('saveBtn').style.display = '';
   document.getElementById('editBtn').style.display = 'none';
   document.getElementById('weekPlanCard').style.display = 'none';
-  // Scan Q2 for any already-saved incomplete items and push them into Q5
-  setTimeout(syncQ2IncompleteToQ5, 50);
+  syncQ2IncompleteToQ5();
 }
 
 // Scans all Q2 rows and ensures any marked "incomplete" are present in Q5.
@@ -971,6 +970,13 @@ async function loadReview(sundayDate) {
   currentReview = data;
   fillAnswers(data);
   fillTargets(data);
+
+  // Always sync Q2 incompletes → Q5, then refresh currentReview so the plan card shows them
+  syncQ2IncompleteToQ5();
+  if (currentReview) {
+    const updatedMatrix = collectMatrixValue('next_priorities');
+    currentReview = { ...currentReview, next_priorities: JSON.stringify(updatedMatrix) };
+  }
 
   const info = document.getElementById('savedInfo');
   const today = new Date();
