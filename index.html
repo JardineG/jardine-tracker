@@ -479,8 +479,48 @@
   .health-metric .override-note { font-size: 10px; color: var(--gold); font-weight: 600; }
 
   /* Memento Mori */
-  /* Top layout — single column now that Memento Mori is removed */
-  .top-layout { margin-bottom: 16px; }
+  .memento-head { background: #2d2d2d; }
+  .mm-head-meta { float: right; font-weight: 500; opacity: 0.8; font-size: 11px; font-style: italic; letter-spacing: 0; }
+  .mm-body { padding: 16px; }
+  .mm-setup { padding: 16px; }
+  .mm-setup p { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .mm-setup-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .mm-setup input[type="date"] {
+    height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: var(--bg);
+  }
+  .mm-save-btn {
+    background: var(--ink); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit;
+  }
+  .mm-save-btn:hover { opacity: 0.8; }
+  .mm-chart-row { display: flex; gap: 10px; align-items: flex-start; overflow-x: auto; padding-bottom: 4px; }
+  .mm-grid-wrap { flex-shrink: 0; }
+  .mm-grid { display: grid; grid-template-columns: repeat(52, 6px); gap: 1px; }
+  .mm-cell { width: 6px; height: 6px; border-radius: 1px; background: var(--line); }
+  .mm-cell.lived { background: var(--ink); }
+  .mm-cell.current { background: var(--gold); box-shadow: 0 0 3px var(--gold); }
+  .mm-labels-col { position: relative; flex-shrink: 0; width: 28px; }
+  .mm-label { position: absolute; left: 0; font-size: 10px; color: var(--muted); font-weight: 600; line-height: 1; transform: translateY(-50%); }
+  .mm-legend { margin-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .mm-legend-cell { display: inline-block; width: 8px; height: 8px; border-radius: 1px; background: var(--line); vertical-align: middle; }
+  .mm-legend-cell.lived { background: var(--ink); }
+  .mm-legend-cell.current { background: var(--gold); }
+  .mm-edit { margin-top: 10px; }
+  .mm-change-btn {
+    background: none; border: 1px solid var(--line); border-radius: 6px;
+    padding: 4px 10px; cursor: pointer; font-size: 11px; color: var(--muted); font-family: inherit;
+  }
+  .mm-change-btn:hover { background: var(--bg); color: var(--ink); }
+
+  /* Top 2-column layout: Memento Mori left, dashboard right */
+  .top-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: start;
+  }
   .top-right-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   .top-right-col .goals-card,
   .top-right-col .today-panel,
@@ -735,6 +775,9 @@
   </div>
 
   <div class="top-layout">
+    <!-- Left column: Memento Mori -->
+    <div id="mementoSection"></div>
+
     <div class="top-right-col">
       <!-- Goals card -->
       <div class="goals-card" id="goalsCard"></div>
@@ -2374,6 +2417,88 @@ document.addEventListener('change', (e) => {
   saveWpStatus(idx, val);
 });
 
+// ---------- Memento Mori ----------
+function renderMementoMori() {
+  const el = document.getElementById('mementoSection');
+  if (!el) return;
+  const birthday = state.profile?.birthday;
+
+  if (!birthday) {
+    el.innerHTML = `
+      <div class="section" style="margin-bottom:0">
+        <div class="section-head memento-head">Memento Mori · Life in Weeks</div>
+        <div class="mm-setup">
+          <p>Each square is one week of a 90-year life. Enter your birthday to see how many you've lived — and how many remain.</p>
+          <div class="mm-setup-row">
+            <input type="date" id="mm-bday-input" max="${new Date().toISOString().slice(0,10)}" />
+            <button class="mm-save-btn" onclick="saveBirthday()">Set Birthday</button>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const birth = new Date(birthday + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+  const weeksLived = Math.floor((today - birth) / MS_PER_WEEK);
+  const YEARS = 70, WPY = 52, TOTAL = YEARS * WPY;
+  const UNIT = 7; // cell 6px + gap 1px
+  const ageYears = Math.floor((today - birth) / (365.25 * 24 * 60 * 60 * 1000));
+  const weeksLeft = Math.max(0, TOTAL - weeksLived);
+
+  let cells = '';
+  for (let i = 0; i < TOTAL; i++) {
+    if (i < weeksLived) cells += '<span class="mm-cell lived"></span>';
+    else if (i === weeksLived) cells += '<span class="mm-cell current"></span>';
+    else cells += '<span class="mm-cell"></span>';
+  }
+
+  let labels = '';
+  for (let y = 0; y <= YEARS; y += 5) {
+    labels += `<div class="mm-label" style="top:${y * UNIT}px">${y}</div>`;
+  }
+
+  el.innerHTML = `
+    <div class="section" style="margin-bottom:0">
+      <div class="section-head memento-head">
+        Memento Mori
+        <span class="mm-head-meta">Age ${ageYears} &nbsp;·&nbsp; ${weeksLived.toLocaleString()} weeks lived &nbsp;·&nbsp; ${weeksLeft.toLocaleString()} remaining</span>
+      </div>
+      <div class="mm-body">
+        <div class="mm-chart-row">
+          <div class="mm-grid-wrap">
+            <div class="mm-grid">${cells}</div>
+          </div>
+          <div class="mm-labels-col" style="height:${YEARS * UNIT}px">${labels}</div>
+        </div>
+        <div class="mm-legend">
+          <span class="mm-legend-cell lived"></span> Weeks lived &nbsp;&nbsp;
+          <span class="mm-legend-cell current"></span> This week &nbsp;&nbsp;
+          <span class="mm-legend-cell"></span> Weeks ahead
+        </div>
+        <div class="mm-edit">
+          <button class="mm-change-btn" onclick="clearBirthday()">Change birthday</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function saveBirthday() {
+  const input = document.getElementById('mm-bday-input');
+  if (!input || !input.value) return;
+  if (!state.profile) state.profile = {};
+  state.profile.birthday = input.value;
+  save();
+  renderMementoMori();
+}
+
+function clearBirthday() {
+  if (state.profile) delete state.profile.birthday;
+  save();
+  renderMementoMori();
+}
+
 function renderAll() {
   renderHeader();
   // Toggle tracker vs overview
@@ -2393,6 +2518,7 @@ function renderAll() {
     renderOverview();
     return;
   }
+  renderMementoMori();
   renderGoals();
   renderTodayPanel();
   renderStats();
