@@ -737,6 +737,42 @@ function enterEditMode() {
   document.getElementById('saveBtn').style.display = '';
   document.getElementById('editBtn').style.display = 'none';
   document.getElementById('weekPlanCard').style.display = 'none';
+  // Scan Q2 for any already-saved incomplete items and push them into Q5
+  setTimeout(syncQ2IncompleteToQ5, 50);
+}
+
+// Scans all Q2 rows and ensures any marked "incomplete" are present in Q5.
+function syncQ2IncompleteToQ5() {
+  const q2Rows = document.querySelectorAll('.q-goals[data-key="goals_last_week"] .goal-row');
+  q2Rows.forEach(row => {
+    const status = row.querySelector('.goal-status')?.value;
+    if (status !== 'incomplete') return;
+    const goalText = (row.querySelector('.goal-input')?.value || '').trim();
+    const cat = row.querySelector('.goal-cat-pill')?.dataset.cat || '';
+    if (!goalText) return;
+
+    const matrixCat = PRIORITY_CATS.includes(cat) ? cat : 'Work';
+    const body = document.querySelector(`.pm-col-body[data-cat="${matrixCat}"]`);
+    if (!body) return;
+
+    const already = Array.from(body.querySelectorAll('textarea'))
+      .some(t => t.value.trim() === goalText);
+    if (already) return;
+
+    const emptyTA = Array.from(body.querySelectorAll('textarea')).find(t => !t.value.trim());
+    if (emptyTA) {
+      emptyTA.value = goalText;
+      emptyTA.dispatchEvent(new Event('input'));
+    } else {
+      const idx = body.querySelectorAll('.pm-item').length + 1;
+      const newItem = document.createElement('div');
+      newItem.className = 'pm-item';
+      newItem.innerHTML = `<span class="pm-num">${idx}.</span><textarea class="auto-grow" rows="1"></textarea>`;
+      newItem.querySelector('textarea').value = goalText;
+      body.appendChild(newItem);
+      autoGrowAll(body);
+    }
+  });
 }
 
 function renderWeekPlanCard() {
