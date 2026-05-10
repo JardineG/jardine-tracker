@@ -2251,14 +2251,32 @@ async function loadWeeklyPriorities() {
   wpWeekEnding = lastSundayStr(); // the review that has next_priorities for this week
 
   try {
-    // 1. Load next_priorities from last week's review
-    const { data, error } = await sb
+    // 1. Load next_priorities — check last Sunday first, then next Sunday as fallback
+    //    (priorities may be saved to the upcoming week's review if set mid-week)
+    let data, error;
+    ({ data, error } = await sb
       .from('weekly_reviews')
       .select('next_priorities')
       .eq('week_ending', wpWeekEnding)
-      .maybeSingle();
+      .maybeSingle());
 
-    if (error || !data || !data.next_priorities) {
+    if ((error || !data || !data.next_priorities)) {
+      // Fallback: check next Sunday's review (user may have saved there)
+      const nextSundayFallback = thisSundayStr();
+      if (nextSundayFallback !== wpWeekEnding) {
+        const { data: d2, error: e2 } = await sb
+          .from('weekly_reviews')
+          .select('next_priorities')
+          .eq('week_ending', nextSundayFallback)
+          .maybeSingle();
+        if (!e2 && d2 && d2.next_priorities) {
+          data = d2;
+          wpWeekEnding = nextSundayFallback; // use this key for status storage too
+        }
+      }
+    }
+
+    if (!data || !data.next_priorities) {
       list.innerHTML = '<div class="wp-empty">No priorities set for this week yet — <a href="weekly-review.html" style="color:var(--gold);font-weight:700;">go to Weekly Review →</a></div>';
       return;
     }
