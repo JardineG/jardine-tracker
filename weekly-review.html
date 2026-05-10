@@ -1437,9 +1437,64 @@ document.addEventListener('change', (e) => {
 });
 
 // Status dropdown: keep data-value in sync so CSS can color it.
+// Also: when a Q2 goal is marked "incomplete", push it into Q5 automatically.
 document.addEventListener('change', (e) => {
-  if (e.target.classList.contains('goal-status')) {
-    e.target.dataset.value = e.target.value;
+  if (!e.target.classList.contains('goal-status')) return;
+  e.target.dataset.value = e.target.value;
+
+  // Only act on Q2 (goals_last_week) status changes
+  const q2Container = document.querySelector('.q-goals[data-key="goals_last_week"]');
+  if (!q2Container || !q2Container.contains(e.target)) return;
+
+  const row = e.target.closest('.goal-row');
+  if (!row) return;
+  const goalText = (row.querySelector('.goal-input')?.value || '').trim();
+  const cat = row.querySelector('.goal-cat-pill')?.dataset.cat || '';
+  const newStatus = e.target.value;
+
+  if (newStatus === 'incomplete') {
+    // Add to Q5 matrix if not already there
+    const matrixCat = PRIORITY_CATS.includes(cat) ? cat : 'Work';
+    const body = document.querySelector(`.pm-col-body[data-cat="${matrixCat}"]`);
+    if (!body) return;
+
+    // Check if already in Q5
+    const already = Array.from(body.querySelectorAll('textarea'))
+      .some(t => t.value.trim() === goalText);
+    if (already || !goalText) return;
+
+    // Find first empty row or append a new one
+    const emptyTA = Array.from(body.querySelectorAll('textarea'))
+      .find(t => !t.value.trim());
+    if (emptyTA) {
+      emptyTA.value = goalText;
+      emptyTA.dispatchEvent(new Event('input')); // trigger auto-resize
+    } else {
+      const idx = body.querySelectorAll('.pm-item').length + 1;
+      const newItem = document.createElement('div');
+      newItem.className = 'pm-item';
+      newItem.innerHTML = `<span class="pm-num">${idx}.</span><textarea class="auto-grow" rows="1"></textarea>`;
+      newItem.querySelector('textarea').value = goalText;
+      body.appendChild(newItem);
+      autoGrowAll(body);
+    }
+
+    // Flash the Q5 card so user notices it was updated
+    const q5Card = document.querySelector('.q-card:has(.priority-matrix[data-key="next_priorities"])');
+    if (q5Card) {
+      q5Card.style.transition = 'box-shadow 0.3s';
+      q5Card.style.boxShadow = '0 0 0 3px var(--gold)';
+      setTimeout(() => { q5Card.style.boxShadow = ''; }, 1200);
+    }
+  } else {
+    // Status changed away from incomplete — remove from Q5 if it's there and not done
+    const matrixCat = PRIORITY_CATS.includes(cat) ? cat : 'Work';
+    const body = document.querySelector(`.pm-col-body[data-cat="${matrixCat}"]`);
+    if (body && goalText) {
+      body.querySelectorAll('textarea').forEach(t => {
+        if (t.value.trim() === goalText) t.value = '';
+      });
+    }
   }
 });
 
