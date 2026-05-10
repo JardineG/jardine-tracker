@@ -1041,9 +1041,10 @@ async function loadReview(sundayDate) {
     info.textContent = 'Not saved yet';
     currentReview = null; // treat stub as no review
     enterEditMode(); // new / unsaved week → open in edit mode
-    // Brand-new week: try to prefill Q2 from last week's Q6, and pull last week's targets too
+    // Brand-new week: prefill Q2 from last week's priorities, carry incomplete ones into Q5
     await prefillGoalsFromLastWeek(sundayDate);
     await prefillTargetsFromLastWeek(sundayDate);
+    await prefillIncompleteIntoNextWeek(sundayDate);
   }
 
   // Show reminder banner if it's Sunday and this week's review is empty
@@ -1093,6 +1094,82 @@ async function prefillGoalsFromLastWeek(sundayDate) {
   const note = document.querySelector('.prefill-note[data-key="goals_last_week"]');
   if (note) {
     note.textContent = `↑ pulled in from last week's priorities — set the status for each one`;
+    note.classList.add('show');
+  }
+}
+
+// When opening a fresh week, pull any INCOMPLETE priorities from last week into Q5
+// so unfinished goals automatically roll forward into the new week's plan.
+async function prefillIncompleteIntoNextWeek(sundayDate) {
+  const lastSunday = new Date(sundayDate);
+  lastSunday.setDate(lastSunday.getDate() - 7);
+  const lastDateStr = ymd(lastSunday);
+
+  // Fetch last week's graded goals (goals_last_week has status per goal) and raw priorities
+  const { data, error } = await sb
+    .from('weekly_reviews')
+    .select('goals_last_week, next_priorities')
+    .eq('week_ending', lastDateStr)
+    .maybeSingle();
+
+  if (error || !data) return;
+
+  let incompleteGoals = []; // [{ goal, category }]
+
+  // Try graded goals first (goals_last_week has explicit status per goal)
+  if (data.goals_last_week) {
+    try {
+      const graded = JSON.parse(data.goals_last_week);
+      if (Array.isArray(graded)) {
+        graded.forEach(g => {
+          if (g.goal && g.goal.trim() && g.status !== 'completed' && g.status !== 'done') {
+            incompleteGoals.push({ goal: g.goal.trim(), category: g.category || '' });
+          }
+        });
+      }
+    } catch {}
+  }
+
+  // Fallback: use raw next_priorities + localStorage statuses
+  if (incompleteGoals.length === 0 && data.next_priorities) {
+    let rawGoals = [];
+    try {
+      const matrix = JSON.parse(data.next_priorities);
+      if (matrix && typeof matrix === 'object' && !Array.isArray(matrix)) {
+        PRIORITY_CATS.forEach(cat => {
+          (matrix[cat] || []).filter(Boolean).forEach(g => rawGoals.push({ goal: g, category: cat }));
+        });
+      }
+    } catch {}
+
+    // Check localStorage statuses from the daily tracker widget
+    const lsStatuses = JSON.parse(localStorage.getItem(`wpStatus_${lastDateStr}`) || 'null');
+    rawGoals.forEach(g => {
+      const match = lsStatuses && lsStatuses.find(s => s.goal === g.goal && s.category === g.category);
+      const isDone = match && (match.status === 'done' || match.status === 'completed');
+      if (!isDone) incompleteGoals.push(g);
+    });
+  }
+
+  if (incompleteGoals.length === 0) return;
+
+  // Group by category and fill into Q5 matrix
+  const matrix = {};
+  PRIORITY_CATS.forEach(cat => { matrix[cat] = []; });
+  incompleteGoals.forEach(g => {
+    const cat = PRIORITY_CATS.includes(g.category) ? g.category : 'Work';
+    matrix[cat].push(g.goal);
+  });
+
+  // Only set categories that have items (don't overwrite empty cats with blanks)
+  const filled = {};
+  PRIORITY_CATS.forEach(cat => { if (matrix[cat].length) filled[cat] = matrix[cat]; });
+
+  setMatrixRows('next_priorities', filled);
+
+  const note = document.querySelector('.prefill-note[data-key="next_priorities"]');
+  if (note) {
+    note.textContent = `↑ ${incompleteGoals.length} incomplete ${incompleteGoals.length === 1 ? 'priority' : 'priorities'} rolled over from last week — update or remove as needed`;
     note.classList.add('show');
   }
 }
