@@ -879,11 +879,9 @@ const morningHabits = [
 ];
 const eveningHabits = [
   { id: 'tft_tapping', name: 'TFT Tapping', type: 'check' },
-  { id: 'system_relax', name: 'System Relaxation', type: 'check' },
   { id: 'fiction', name: 'Read fiction', type: 'check' },
   { id: 'evening_journal', name: 'Evening journal', type: 'check' },
   { id: 'homecoming', name: 'Homecoming Declaration', type: 'check' },
-  { id: 'havening', name: 'Havening Therapy', type: 'check' },
   { id: 'walk12k', name: 'Total Steps', type: 'number', unit: 'steps', target: 12000 },
   { id: 'calorie_goal', name: 'Total Calories', type: 'number', unit: 'cal' },
   { id: 'protein_goal', name: 'Total Protein', type: 'number', unit: 'g' },
@@ -901,6 +899,11 @@ const SUPABASE_URL = 'https://prqpnfrfwquncyfysvks.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_zXQdgBgA0DXTf7julXpQkw_A4Gd-57l';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
+
+// ---------- Access control ----------
+const OWNER_EMAIL    = 'jardine.gerodias@expedise.ph';
+const ALLOWED_EMAILS = ['jardine.gerodias@expedise.ph', 'kaiser@streamlinedcampaigns.com'];
+let dataUserId = null; // always points to the owner's Supabase user_id
 
 // ---------- State ----------
 const STORAGE_KEY = 'infiniteYouTracker_v1';
@@ -1190,24 +1193,24 @@ let cloudSaveTimer = null;
 let initialPullDone = false;
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  if (!currentUser) return; // not signed in yet — skip cloud
+  if (!currentUser || !dataUserId) return; // not signed in yet — skip cloud
   if (!initialPullDone) return; // pull hasn't finished — don't risk overwriting cloud
   clearTimeout(cloudSaveTimer);
   cloudSaveTimer = setTimeout(pushStateToCloud, 800);
 }
 async function pushStateToCloud() {
-  if (!currentUser) return;
+  if (!currentUser || !dataUserId) return;
   const { error } = await sb
     .from('tracker_state')
-    .upsert({ user_id: currentUser.id, state: state, updated_at: new Date().toISOString() });
+    .upsert({ user_id: dataUserId, state: state, updated_at: new Date().toISOString() });
   if (error) console.error('Cloud save failed:', error);
 }
 async function pullStateFromCloud() {
-  if (!currentUser) return;
+  if (!currentUser || !dataUserId) return;
   const { data, error } = await sb
     .from('tracker_state')
     .select('state')
-    .eq('user_id', currentUser.id)
+    .eq('user_id', dataUserId)
     .maybeSingle();
   if (error) { console.error('Cloud load failed:', error); return; } // leave initialPullDone=false so we don't push over cloud
   if (data && data.state && Object.keys(data.state).length) {
@@ -2208,7 +2211,6 @@ document.getElementById('gm-save').addEventListener('click', () => {
   const w = parseFloat(document.getElementById('gm-weight').value);
   const d = document.getElementById('gm-weight-date').value;
   state.goals.weight = (w > 0) ? { target: w, targetDate: d || null } : {};
-  state.goals.steps = (s > 0) ? { daily: s } : {};
   save(); closeGoalsModal(); renderAll();
 });
 
@@ -2993,7 +2995,40 @@ if (AUTH_ENABLED) {
   async function initApp(user) {
     if (appInitDone) return;
     appInitDone = true;
+
+    // Block anyone not on the allowed list
+    if (!ALLOWED_EMAILS.includes(user.email)) {
+      await sb.auth.signOut();
+      currentUser = null;
+      appInitDone = false;
+      setAuthStatus('This email is not authorized to access this tracker.', 'error');
+      showAuth();
+      return;
+    }
+
     currentUser = user;
+
+    if (user.email === OWNER_EMAIL) {
+      // Owner: use their own user_id, and save it so collaborators can find it
+      dataUserId = user.id;
+      try {
+        await sb.from('tracker_config')
+          .upsert({ key: 'owner_user_id', value: user.id }, { onConflict: 'key' });
+      } catch { /* tracker_config table may not exist yet — see setup SQL */ }
+    } else {
+      // Collaborator: look up the owner's user_id from the shared config table
+      try {
+        const { data } = await sb.from('tracker_config')
+          .select('value')
+          .eq('key', 'owner_user_id')
+          .maybeSingle();
+        dataUserId = data?.value || null;
+      } catch { dataUserId = null; }
+      if (!dataUserId) {
+        setAuthStatus('Sharing not set up yet — ask Jardine to log in first.', 'error');
+      }
+    }
+
     hideAuth();
     try { await pullStateFromCloud(); } catch(e) { console.error('Cloud pull error:', e); }
     carryOverUnfinishedGoals();

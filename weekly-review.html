@@ -1035,6 +1035,11 @@ async function loadReview(sundayDate) {
     await prefillIncompleteIntoNextWeek(sundayDate);
   }
 
+  // Merge any status updates made in the daily tracker (localStorage) into Q2 rows
+  const lastSunForMerge = new Date(sundayDate);
+  lastSunForMerge.setDate(lastSunForMerge.getDate() - 7);
+  mergeTrackerStatuses(ymd(lastSunForMerge));
+
   // Show reminder banner if it's Sunday and this week's review is empty
   const banner = document.getElementById('banner');
   if (isThisWeek && isSunday && !data) {
@@ -1042,6 +1047,30 @@ async function loadReview(sundayDate) {
   } else if (banner.classList.contains('info')) {
     banner.className = 'banner';
   }
+}
+
+// Pull any priority statuses saved from the daily tracker (localStorage) and
+// apply them to the Q2 goal-status dropdowns, so the weekly review stays in
+// sync without needing DB stub records.
+function mergeTrackerStatuses(lastSundayDateStr) {
+  let saved;
+  try {
+    const raw = localStorage.getItem('wpStatus_' + lastSundayDateStr);
+    if (!raw) return;
+    saved = JSON.parse(raw);
+  } catch { return; }
+  if (!Array.isArray(saved) || saved.length === 0) return;
+
+  document.querySelectorAll('.q-goals[data-key="goals_last_week"] .goal-row').forEach(row => {
+    const text = (row.querySelector('.goal-input')?.value || '').trim();
+    const match = saved.find(s => s.goal === text);
+    if (!match) return;
+    const sel = row.querySelector('.goal-status');
+    if (sel) {
+      sel.value = match.status;
+      sel.dataset.value = match.status;
+    }
+  });
 }
 
 // When opening a fresh week (no saved review), copy last week's "next priorities"
