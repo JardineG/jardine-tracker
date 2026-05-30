@@ -740,12 +740,12 @@ function enterEditMode() {
   syncQ2IncompleteToQ5();
 }
 
-// Scans all Q2 rows and ensures any marked "incomplete" are present in Q5.
+// Scans all Q2 rows and ensures any marked "incomplete" or "not_started" are present in Q5.
 function syncQ2IncompleteToQ5() {
   const q2Rows = document.querySelectorAll('.q-goals[data-key="goals_last_week"] .goal-row');
   q2Rows.forEach(row => {
     const status = row.querySelector('.goal-status')?.value;
-    if (status !== 'incomplete') return;
+    if (status !== 'incomplete' && status !== 'not_started') return;
     const goalText = (row.querySelector('.goal-input')?.value || '').trim();
     const cat = row.querySelector('.goal-cat-pill')?.dataset.cat || '';
     if (!goalText) return;
@@ -951,7 +951,7 @@ function showBanner(msg, kind) {
   }
 }
 
-// Merges any Q2 incomplete items directly into the Q5 matrix data object.
+// Merges any Q2 incomplete or not-started items directly into the Q5 matrix data object.
 // Works on the raw review data before any DOM rendering happens.
 function mergeIncompletesIntoQ5(data) {
   if (!data) return data;
@@ -962,7 +962,7 @@ function mergeIncompletesIntoQ5(data) {
   if (!Array.isArray(q2Goals)) q2Goals = [];
 
   const incompletes = q2Goals.filter(g =>
-    g.goal && g.goal.trim() && g.status === 'incomplete'
+    g.goal && g.goal.trim() && (g.status === 'incomplete' || g.status === 'not_started')
   );
   if (incompletes.length === 0) return data;
 
@@ -1186,7 +1186,7 @@ async function prefillIncompleteIntoNextWeek(sundayDate) {
 
   const note = document.querySelector('.prefill-note[data-key="next_priorities"]');
   if (note) {
-    note.textContent = `↑ ${incompleteGoals.length} incomplete ${incompleteGoals.length === 1 ? 'priority' : 'priorities'} rolled over from last week — update or remove as needed`;
+    note.textContent = `↑ ${incompleteGoals.length} unfinished ${incompleteGoals.length === 1 ? 'priority' : 'priorities'} rolled over from last week (incomplete or not started) — update or remove as needed`;
     note.classList.add('show');
   }
 }
@@ -1537,7 +1537,7 @@ document.addEventListener('change', (e) => {
 });
 
 // Status dropdown: keep data-value in sync so CSS can color it.
-// Also: when a Q2 goal is marked "incomplete", push it into Q5 automatically.
+// Also: when a Q2 goal is marked "incomplete" or "not_started", push it into Q5 automatically.
 document.addEventListener('change', (e) => {
   if (!e.target.classList.contains('goal-status')) return;
   e.target.dataset.value = e.target.value;
@@ -1552,7 +1552,7 @@ document.addEventListener('change', (e) => {
   const cat = row.querySelector('.goal-cat-pill')?.dataset.cat || '';
   const newStatus = e.target.value;
 
-  if (newStatus === 'incomplete') {
+  if (newStatus === 'incomplete' || newStatus === 'not_started') {
     // Add to Q5 matrix if not already there
     const matrixCat = PRIORITY_CATS.includes(cat) ? cat : 'Work';
     const body = document.querySelector(`.pm-col-body[data-cat="${matrixCat}"]`);
