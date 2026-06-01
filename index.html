@@ -515,20 +515,18 @@
 
   /* Top 2-column layout: Memento Mori left, dashboard right */
   .top-layout {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 16px;
     margin-bottom: 16px;
-    align-items: start;
   }
-  .top-right-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-  .top-right-col .goals-card,
-  .top-right-col .today-panel,
-  .top-right-col .health-card,
-  .top-right-col .stats { margin-bottom: 0; }
-  @media (max-width: 960px) {
-    .top-layout { grid-template-columns: 1fr; }
+  .bottom-stats-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
   }
+  .bottom-stats-section .goals-card,
+  .bottom-stats-section .today-panel,
+  .bottom-stats-section .health-card,
+  .bottom-stats-section .stats { margin-bottom: 0; }
   /* Daily Goals */
   .daily-goals-section {
     background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
@@ -775,28 +773,8 @@
   </div>
 
   <div class="top-layout">
-    <!-- Left column: Memento Mori -->
+    <!-- Memento Mori (full width now) -->
     <div id="mementoSection"></div>
-
-    <div class="top-right-col">
-      <!-- Goals card -->
-      <div class="goals-card" id="goalsCard"></div>
-
-      <!-- Today focus panel -->
-      <div class="today-panel" id="todayPanel"></div>
-
-      <!-- Health sync card -->
-      <div class="health-card" id="healthCard">
-        <div class="health-card-head">
-          <span class="label">Apple Health · synced automatically</span>
-          <span class="badge" id="healthBadge">synced</span>
-        </div>
-        <div class="health-metrics" id="healthMetrics"></div>
-      </div>
-
-      <!-- Stats strip -->
-      <div class="stats" id="stats"></div>
-    </div>
   </div>
 
   <!-- Overview view (hidden unless overview mode) -->
@@ -836,6 +814,27 @@
   </div>
 
   </div><!-- /trackerView -->
+
+  <!-- Bottom stats: Goals, Today, Stats strip -->
+  <div class="bottom-stats-section">
+    <!-- Goals card -->
+    <div class="goals-card" id="goalsCard"></div>
+
+    <!-- Today focus panel -->
+    <div class="today-panel" id="todayPanel"></div>
+
+    <!-- Health sync card -->
+    <div class="health-card" id="healthCard">
+      <div class="health-card-head">
+        <span class="label">Apple Health · synced automatically</span>
+        <span class="badge" id="healthBadge">synced</span>
+      </div>
+      <div class="health-metrics" id="healthMetrics"></div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats" id="stats"></div>
+  </div>
 
   <div class="footer">
     <div class="left">NO ZERO DAYS.</div>
@@ -879,6 +878,7 @@ const morningHabits = [
 ];
 const eveningHabits = [
   { id: 'tft_tapping', name: 'TFT Tapping', type: 'check' },
+  { id: 'deadbug', name: 'Deadbug Exercise', type: 'check' },
   { id: 'fiction', name: 'Read fiction', type: 'check' },
   { id: 'evening_journal', name: 'Evening journal', type: 'check' },
   { id: 'homecoming', name: 'Homecoming Declaration', type: 'check' },
