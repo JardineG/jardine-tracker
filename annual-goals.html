@@ -169,6 +169,25 @@
     .ag-row { flex-wrap: wrap; }
     .ov-grid { grid-template-columns: 1fr; }
   }
+
+  /* ✦ REDESIGN LAYER — matches Daily Habits / Weekly Review */
+  :root { --shadow-sm: 0 1px 2px rgba(70,52,16,.05), 0 1px 3px rgba(70,52,16,.05); --shadow-md: 0 2px 6px rgba(70,52,16,.05), 0 10px 28px rgba(70,52,16,.07); --shadow-lg: 0 12px 40px rgba(70,52,16,.14); --ease: cubic-bezier(.4,0,.2,1); }
+  html, body { font-size: 14.5px; letter-spacing: -0.1px; }
+  body { background: radial-gradient(150% 70% at 50% -25%, #F4EFE1 0%, rgba(244,239,225,0) 58%), var(--bg); background-attachment: fixed; }
+  .top-nav { border-bottom: 0; gap: 2px; padding: 5px; background: color-mix(in srgb, var(--panel) 86%, transparent); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-sm); backdrop-filter: blur(8px); overflow-x: auto; scrollbar-width: none; }
+  .top-nav::-webkit-scrollbar { display: none; }
+  .top-nav a { padding: 9px 16px; border-bottom: 0 !important; margin-bottom: 0; border-radius: 10px; letter-spacing: 1.2px; white-space: nowrap; transition: background .18s var(--ease), color .18s var(--ease); }
+  .top-nav a.active { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--ink); }
+  .top-nav a:hover:not(.active) { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .header { border-bottom: 0; }
+  .brand h1 { font-size: 28px; letter-spacing: -1px; }
+  .footer { border-top: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); }
+  .ov-quadrant, .category-block, .goal-list, .stat, .add-card { border-radius: 14px !important; box-shadow: var(--shadow-md); border-color: color-mix(in srgb, var(--line) 72%, transparent); }
+  .ov-quadrant { transition: transform .15s var(--ease), box-shadow .15s var(--ease); }
+  .ov-q-head { letter-spacing: 1.6px; }
+  .ag-status, .ov-pill { box-shadow: var(--shadow-sm); }
+  .ag-row { transition: background .12s var(--ease); }
+  .ag-row:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
 </style>
 </head>
 <body>

@@ -634,55 +634,282 @@
 
   /* Weekly Priorities card */
   .wp-card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
     overflow: hidden; margin-bottom: 16px;
+    box-shadow: 0 1px 2px rgba(70,52,16,.05), 0 8px 24px rgba(70,52,16,.07);
   }
   .wp-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 16px 13px; border-bottom: 1px solid var(--line);
   }
   .wp-title {
-    font-size: 10px; font-weight: 800; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--teal);
+    font-size: 10px; font-weight: 800; letter-spacing: 1.8px;
+    text-transform: uppercase; color: var(--teal); white-space: nowrap;
   }
-  .wp-link {
-    font-size: 11px; color: var(--gold); text-decoration: none; font-weight: 700;
+  .wp-link { font-size: 11px; color: var(--gold); text-decoration: none; font-weight: 700; white-space: nowrap; }
+  .wp-list { padding: 0; }
+
+  /* hero */
+  .wp-hero {
+    margin: 14px 14px 4px; padding: 15px 16px 14px; border-radius: 12px;
+    display: flex; align-items: center; gap: 16px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--teal-soft) 42%, var(--panel)), var(--panel));
+    border: 1px solid color-mix(in srgb, var(--teal) 16%, var(--line));
   }
-  .wp-list { padding: 4px 0; }
-  .wp-row {
-    display: grid; grid-template-columns: 20px 1fr auto auto;
-    align-items: center; gap: 8px 10px;
-    padding: 8px 14px; border-bottom: 1px solid var(--line);
-  }
-  .wp-row:last-child { border-bottom: none; }
-  .wp-num { font-weight: 800; color: var(--gold); font-size: 13px; text-align: right; }
-  .wp-text { font-size: 13px; color: var(--ink); line-height: 1.4; }
-  .wp-cat {
-    display: inline-block; padding: 3px 9px; border-radius: 20px;
-    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: #fff;
-    white-space: nowrap;
-  }
-  .wp-cat[data-cat="Work"]                { background: #4A8FD4; }
-  .wp-cat[data-cat="Growth and Learning"] { background: #1A4A2A; }
-  .wp-cat[data-cat="Joyful Pursuits"]     { background: #C2A040; }
-  .wp-cat[data-cat="Health"]              { background: #8C1A2C; }
-  .wp-cat[data-cat="Family"]              { background: #196878; }
-  .wp-cat[data-cat="—"],
-  .wp-cat:not([data-cat])                 { background: #9ca3af; }
+  .wp-ring { position: relative; width: 78px; height: 78px; flex: 0 0 auto; }
+  .wp-ring svg { transform: rotate(-90deg); display: block; }
+  .wp-ring .track { stroke: color-mix(in srgb, var(--ink) 9%, transparent); }
+  .wp-ring .bar { stroke: var(--gold); stroke-linecap: round; transition: stroke-dashoffset .7s cubic-bezier(.4,0,.2,1); }
+  .wp-ring .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+  .wp-ring .frac { font-weight: 800; font-size: 22px; color: var(--ink); letter-spacing: -.5px; }
+  .wp-ring .frac b { color: var(--gold); }
+  .wp-ring .lbl { font-size: 8.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+  .wp-hero .hero-meta { flex: 1 1 auto; min-width: 0; }
+  .wp-hero .hero-stats { display: flex; gap: 8px; }
+  .wp-stat { flex: 1 1 0; background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 8px 10px; }
+  .wp-stat .v { font-weight: 800; font-size: 19px; color: var(--ink); display: flex; align-items: baseline; gap: 4px; line-height: 1; }
+  .wp-stat .v .flame { font-size: 15px; }
+  .wp-stat .v .xp { color: var(--gold); }
+  .wp-stat .v small { color: var(--muted); font-weight: 700; font-size: 13px; }
+  .wp-stat .k { font-size: 9px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
+  .wp-hero-msg { margin: 11px 16px 0; font-style: italic; font-weight: 500; font-size: 13.5px; color: var(--teal); }
+
+  /* badges */
+  .wp-badges { display: flex; gap: 14px; padding: 14px 16px 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .wp-badges::-webkit-scrollbar { display: none; }
+  .wp-badge { flex: 0 0 auto; width: 58px; text-align: center; }
+  .wp-badge .medal { width: 46px; height: 46px; margin: 0 auto 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
+  .wp-badge.earned .medal { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--gold) 30%, var(--panel)), var(--panel)); border: 2px solid var(--gold); box-shadow: 0 4px 12px color-mix(in srgb, var(--gold) 30%, transparent); }
+  .wp-badge.locked .medal { background: color-mix(in srgb, var(--ink) 4%, var(--panel)); border: 2px dashed var(--line); filter: grayscale(1); opacity: .55; }
+  .wp-badge .nm { font-size: 9px; line-height: 1.2; color: var(--muted); font-weight: 700; }
+  .wp-badge.earned .nm { color: var(--ink); }
+  .wp-badge.just-earned .medal { animation: wpBadgePop .6s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes wpBadgePop { 0%{transform:scale(.4) rotate(-12deg);} 60%{transform:scale(1.18) rotate(6deg);} 100%{transform:scale(1) rotate(0);} }
+
+  /* grouped life-area sections */
+  .wp-groups { padding: 4px 14px 14px; }
+  .wp-cat { margin-top: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--cat-tint, var(--panel)); overflow: hidden; }
+  .wp-cat:first-child { margin-top: 4px; }
+  .wp-cat.done { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cat) 35%, transparent); }
+  .wp-cat-head { display: flex; align-items: center; gap: 9px; padding: 11px 13px 10px; }
+  .wp-cat-head .swatch { width: 9px; height: 9px; border-radius: 3px; background: var(--cat); flex: 0 0 auto; }
+  .wp-cat-head .name { font-weight: 800; font-size: 14px; color: var(--ink); letter-spacing: -.2px; white-space: nowrap; }
+  .wp-cat-head .pips { display: flex; gap: 3px; margin-left: 2px; }
+  .wp-cat-head .pip { width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 13%, transparent); }
+  .wp-cat-head .pip.on { background: var(--cat); }
+  .wp-cat-head .count { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wp-cat.done .count { display: none; }
+  .wp-cat-head .crown { margin-left: auto; display: none; align-items: center; gap: 5px; font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--cat); }
+  .wp-cat.done .crown { display: inline-flex; }
+  .wp-cat-body { padding: 2px 0 5px; }
+
+  .wp-goal { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 11px; padding: 9px 13px; }
+  .wp-goal + .wp-goal { border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  .wp-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--ink) 22%, transparent); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; transition: transform .15s ease, border-color .2s ease, background .2s ease; -webkit-tap-highlight-color: transparent; }
+  .wp-check:active { transform: scale(.86); }
+  .wp-check svg { width: 14px; height: 14px; opacity: 0; transform: scale(.5); transition: opacity .2s ease, transform .25s cubic-bezier(.34,1.56,.64,1); }
+  .wp-goal.s-completed .wp-check { background: var(--cat); border-color: var(--cat); }
+  .wp-goal.s-completed .wp-check svg { opacity: 1; transform: scale(1); stroke: #fff; }
+  .wp-goal.s-killed .wp-check { border-style: dashed; opacity: .5; }
+  .wp-goal.s-killed .wp-check::after { content: ""; width: 11px; height: 2px; border-radius: 2px; background: var(--muted); }
+  .wp-goal.s-incomplete .wp-check { border-color: color-mix(in srgb, #8C1A2C 60%, transparent); }
+  .wp-goal.s-postponed .wp-check { border-color: color-mix(in srgb, #8a6a1a 55%, transparent); }
+  .wp-goal-text { font-size: 13.5px; line-height: 1.38; color: var(--ink); text-wrap: pretty; transition: color .2s ease; }
+  .wp-goal.s-completed .wp-goal-text { color: var(--muted); }
+  .wp-goal.s-killed .wp-goal-text { color: var(--muted); text-decoration: line-through; opacity: .65; }
+
   .wp-status {
-    padding: 3px 9px; border-radius: 20px; border: none;
-    font-size: 10px; font-family: inherit; font-weight: 700;
-    cursor: pointer; -webkit-appearance: none; appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='rgba(0,0,0,0.25)'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 6px center;
-    padding-right: 18px;
+    appearance: none; -webkit-appearance: none; border: none; font-family: inherit;
+    font-size: 10px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+    padding: 5px 11px; border-radius: 20px; cursor: pointer; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent; transition: transform .12s ease;
   }
-  .wp-status[data-value="not_started"] { background-color: #e5e7eb; color: #374151; }
-  .wp-status[data-value="completed"]   { background-color: #D0E8D4; color: #1A4A2A; }
-  .wp-status[data-value="incomplete"]  { background-color: #EED4D8; color: #8C1A2C; }
-  .wp-status[data-value="postponed"]   { background-color: #F0E8C8; color: #8a6a1a; }
-  .wp-status[data-value="killed"]      { background-color: #f3f4f6; color: #9ca3af; }
-  .wp-empty { padding: 14px; font-size: 13px; color: var(--muted); font-style: italic; text-align: center; }
+  .wp-status:active { transform: scale(.94); }
+  .wp-status[data-value="not_started"] { background: #e5e7eb; color: #374151; }
+  .wp-status[data-value="completed"]   { background: #D0E8D4; color: #1A4A2A; }
+  .wp-status[data-value="incomplete"]  { background: #EED4D8; color: #8C1A2C; }
+  .wp-status[data-value="postponed"]   { background: #F0E8C8; color: #8a6a1a; }
+  .wp-status[data-value="killed"]      { background: #f3f4f6; color: #9ca3af; }
+  .wp-goal.pop .wp-check { animation: wpCheckPop .5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes wpCheckPop { 0%{transform:scale(1);} 45%{transform:scale(1.32);} 100%{transform:scale(1);} }
+
+  .wp-status-menu { position: fixed; z-index: 9999; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 6px 20px rgba(70,52,16,.16); padding: 6px; width: 178px; opacity: 0; transform: translateY(-4px) scale(.97); transform-origin: top right; transition: opacity .14s ease, transform .14s ease; pointer-events: none; }
+  .wp-status-menu.open { opacity: 1; transform: none; pointer-events: auto; }
+  .wp-status-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: none; background: transparent; padding: 9px; border-radius: 9px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink); text-align: left; transition: background .12s ease; }
+  .wp-status-menu button:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .wp-status-menu button .sw { width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto; }
+  .wp-status-menu button.active { background: color-mix(in srgb, var(--teal) 9%, transparent); }
+  .wp-status-menu button .tick { margin-left: auto; color: var(--teal); font-weight: 900; opacity: 0; }
+  .wp-status-menu button.active .tick { opacity: 1; }
+
+  .wp-xp-float { position: fixed; z-index: 9999; font-weight: 800; font-size: 16px; color: var(--gold); pointer-events: none; text-shadow: 0 1px 2px rgba(255,255,255,.7); }
+  .wp-spark { position: fixed; z-index: 9999; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; }
+  .wp-empty { padding: 22px 14px; font-size: 13px; color: var(--muted); font-style: italic; text-align: center; }
+  .wp-empty a { color: var(--gold); font-weight: 700; }
+  @media (prefers-reduced-motion: reduce) { .wp-card *, .wp-spark, .wp-xp-float { animation: none !important; transition: none !important; } }
+
+  /* ============================================================
+     VIEW REDESIGN · DAILY  (modern checklist + progress ring)
+     ============================================================ */
+  .morning .day-list { --accent: var(--teal); --accent-soft: var(--teal-soft); }
+  .evening .day-list { --accent: var(--red);  --accent-soft: var(--red-soft); }
+  .day-list { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+  .day-progress { display: flex; align-items: center; gap: 14px; padding: 6px 6px 12px; }
+  .dp-ring { position: relative; width: 56px; height: 56px; border-radius: 50%; flex: 0 0 auto;
+    background: conic-gradient(var(--accent) calc(var(--p) * 1%), color-mix(in srgb, var(--ink) 8%, transparent) 0); }
+  .dp-ring::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: var(--panel); }
+  .dp-ring span { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; font-weight: 800; font-size: 16px; color: var(--ink); }
+  .dp-ring span i { font-style: normal; font-weight: 700; font-size: 11px; color: var(--muted); }
+  .dp-meta { line-height: 1.25; }
+  .dp-pct { font-weight: 800; font-size: 15px; color: var(--ink); }
+  .dp-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .day-row { background: #FCFAF3; border: 1px solid var(--line); border-radius: 12px;
+    padding: 11px 13px; gap: 12px; align-items: center;
+    transition: border-color .15s, background .15s, box-shadow .15s; }
+  .day-row:last-child { border-bottom: 1px solid var(--line); }
+  .day-row:hover { background: #fff; box-shadow: 0 2px 8px rgba(70,52,16,.05); }
+  .day-row .name { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .day-row .habit-hint { font-weight: 400; }
+  .day-row.s-done { border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+    background: color-mix(in srgb, var(--accent) 6%, #FCFAF3); }
+  .day-row .streak { min-width: 46px; font-weight: 700; white-space: nowrap; }
+  .day-row .control { min-width: 96px; }
+  .day-row .circle { width: 30px; height: 30px; border-width: 2px; }
+  .day-row .circle.done::after { width: 7px; height: 13px; border-width: 0 3px 3px 0; }
+  .day-row .num-input, .day-row .time-input { height: 40px; border-radius: 10px; border-width: 2px; font-size: 16px; font-weight: 800; }
+  .day-row .num-input { width: 96px; }
+  .day-row .time-input { width: 112px; }
+
+  /* ============================================================
+     VIEW REDESIGN · WEEK  (clean 7-day dot strip)
+     ============================================================ */
+  body[data-view="week"] table.grid { min-width: 0; }
+  body[data-view="week"] table.grid .cell { height: 46px; }
+  body[data-view="week"] table.grid thead th.day-num { font-size: 15px; font-weight: 800; }
+  body[data-view="week"] table.grid thead th.week-num { background: transparent; }
+  body[data-view="week"] .grid .circle { width: 24px; height: 24px; border-width: 2px; }
+  body[data-view="week"] .grid .circle:hover { transform: scale(1.12); }
+  body[data-view="week"] .grid .circle.done::after { width: 6px; height: 11px; border-width: 0 2.5px 2.5px 0; }
+  body[data-view="week"] .grid .num-input,
+  body[data-view="week"] .grid .time-input { width: 58px; height: 30px; font-size: 12px; border-radius: 8px; }
+
+  /* ============================================================
+     VIEW REDESIGN · MONTH  (heatmap tiles)
+     ============================================================ */
+  body[data-view="month"] table.grid .cell { width: 26px; height: 28px; }
+  body[data-view="month"] .grid td.cell .circle { width: 22px; height: 22px; border-radius: 6px; border-width: 1.5px; margin: 0 auto; box-shadow: none !important; }
+  body[data-view="month"] .grid td.cell .circle:not(.done) { background: color-mix(in srgb, var(--ink) 6%, transparent); border-color: transparent; }
+  body[data-view="month"] .morning .grid td.cell .circle.done { background: var(--teal); border-color: var(--teal); }
+  body[data-view="month"] .evening .grid td.cell .circle.done { background: var(--red); border-color: var(--red); }
+  body[data-view="month"] .grid td.cell .circle.done::after { width: 5px; height: 9px; }
+  body[data-view="month"] .grid td.cell .circle.future { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+  body[data-view="month"] .grid-chip { border-radius: 5px; }
+
+  /* ============================================================
+     ✦ REDESIGN LAYER — premium reskin
+     ============================================================ */
+  :root {
+    --shadow-sm: 0 1px 2px rgba(70,52,16,.05), 0 1px 3px rgba(70,52,16,.05);
+    --shadow-md: 0 2px 6px rgba(70,52,16,.05), 0 10px 28px rgba(70,52,16,.07);
+    --shadow-lg: 0 12px 40px rgba(70,52,16,.14);
+    --r: 16px;
+    --ease: cubic-bezier(.4,0,.2,1);
+  }
+  html, body { font-size: 14.5px; letter-spacing: -0.1px; }
+  body {
+    background:
+      radial-gradient(150% 75% at 50% -25%, #F4EFE1 0%, rgba(244,239,225,0) 58%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+  .wrap { max-width: 1180px; padding: 22px 22px 60px; }
+  .top-nav {
+    border-bottom: 0; gap: 2px; padding: 5px;
+    background: color-mix(in srgb, var(--panel) 86%, transparent);
+    border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: var(--shadow-sm); backdrop-filter: blur(8px);
+    margin-bottom: 22px; overflow-x: auto; scrollbar-width: none;
+  }
+  .top-nav::-webkit-scrollbar { display: none; }
+  .top-nav a {
+    padding: 9px 16px; border-bottom: 0 !important; margin-bottom: 0;
+    border-radius: 10px; letter-spacing: 1.2px; white-space: nowrap;
+    transition: background .18s var(--ease), color .18s var(--ease);
+  }
+  .top-nav a.active { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--ink); }
+  .top-nav a:hover:not(.active) { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .header { border-bottom: 0; align-items: center; padding-bottom: 4px; margin-bottom: 22px; }
+  .brand h1 { font-size: 28px; letter-spacing: -1px; }
+  .brand .sub { letter-spacing: 2.4px; }
+  .month-nav button {
+    border-radius: 10px; padding: 8px 12px; background: var(--panel);
+    box-shadow: var(--shadow-sm); transition: transform .12s var(--ease), background .15s;
+  }
+  .month-nav button:hover { background: #fff; transform: translateY(-1px); }
+  #today-btn { background: var(--ink); color: var(--panel); border-color: var(--ink); font-weight: 700; letter-spacing: .5px; }
+  #today-btn:hover { background: #000; }
+  .month-label { font-size: 15px; min-width: 168px; letter-spacing: -.2px; }
+  .view-tabs {
+    border-radius: 13px; padding: 3px; gap: 2px; border-color: var(--line);
+    background: color-mix(in srgb, var(--ink) 5%, var(--panel));
+    box-shadow: inset 0 1px 2px rgba(70,52,16,.04);
+  }
+  .view-tab {
+    border-right: 0 !important; border-radius: 10px; padding: 7px 15px;
+    transition: background .18s var(--ease), color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .view-tab.active { background: var(--panel); color: var(--gold); box-shadow: var(--shadow-sm); font-weight: 700; }
+  .view-tab:hover:not(.active) { background: transparent; color: var(--ink); }
+  .wp-card, .section, .goals-card, .today-panel, .health-card,
+  .stat, .overview-stat, .chart-card, .activity-card {
+    border-radius: var(--r);
+    border-color: color-mix(in srgb, var(--line) 72%, transparent);
+    box-shadow: var(--shadow-md);
+  }
+  .section { margin-bottom: 18px; }
+  .section-head {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--ink); padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px; letter-spacing: 2px;
+  }
+  .section-head::before {
+    content: ''; width: 9px; height: 9px; border-radius: 50%;
+    background: currentColor; flex: 0 0 auto;
+    box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 18%, transparent);
+  }
+  .section-head .meta { float: none; margin-left: auto; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
+  .morning .section-head { background: linear-gradient(180deg, color-mix(in srgb, var(--teal) 12%, var(--panel)), var(--panel)); color: var(--teal); }
+  .evening .section-head { background: linear-gradient(180deg, color-mix(in srgb, var(--red) 11%, var(--panel)), var(--panel)); color: var(--red); }
+  .weekly  .section-head { background: linear-gradient(180deg, color-mix(in srgb, var(--green) 12%, var(--panel)), var(--panel)); color: var(--green); }
+  .today-panel {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 16%, var(--panel)) 0%, var(--panel) 70%);
+    border-color: color-mix(in srgb, var(--gold) 35%, var(--line));
+    padding: 20px 24px; border-radius: var(--r);
+  }
+  .today-panel .date { font-size: 24px; letter-spacing: -.5px; }
+  .today-panel .progress-bar { height: 12px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+  .today-panel .progress-fill { background: linear-gradient(90deg, var(--gold), #d9b765); }
+  .today-panel .pct { font-size: 30px; letter-spacing: -1px; }
+  .stat { padding: 16px 18px; transition: transform .15s var(--ease), box-shadow .15s var(--ease); }
+  .stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .stat .value { letter-spacing: -1px; }
+  .stat.flame { background: linear-gradient(140deg, color-mix(in srgb, var(--gold) 16%, var(--panel)), var(--panel)); border-color: color-mix(in srgb, var(--gold) 30%, var(--line)); }
+  .goals-card { padding: 20px 22px; gap: 22px; }
+  .goals-section { border-left: 0; padding-left: 0; }
+  .goals-section h3 { display: flex; align-items: center; gap: 7px; }
+  .goals-section h3::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+  .goals-section.weight h3::before { background: var(--teal); }
+  .goals-section.morning-steps h3::before { background: #c89a3a; }
+  .goals-section.steps h3::before { background: var(--gold); }
+  .goals-section.calories h3::before { background: var(--red); }
+  .goals-section.protein h3::before { background: var(--green); }
+  .goals-section .edit-btn { border-radius: 8px; transition: background .15s, color .15s; }
+  .health-card { padding: 16px 18px; }
+  .footer { border-top: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); margin-top: 36px; }
+  .footer .center { font-size: 14px; letter-spacing: 1.5px; }
 
   /* Dashboard (Overview tab) */
   .dash-toolbar {
@@ -1493,7 +1720,8 @@ function renderGrid(wrapId, habits, sectionType) {
     const date = dates[0];
     const ds = ymd(date);
     const isFuture = date > todayDate && ds !== todayStr;
-    let html = '<div class="day-list">';
+    let doneCount = 0;
+    let html = '';
     for (const h of habits) {
       const val = getDay(ds)[h.id];
       // Day-view streak: same special-case as the week/month table
@@ -1525,7 +1753,7 @@ function renderGrid(wrapId, habits, sectionType) {
         const s = habitStreak(h.id);
         dayStreakHtml = s > 0 ? '<span class="fire">🔥</span>' + s : '';
       }
-      let control = '';
+      let control = '', logged = false;
       if (h.type === 'number') {
         const has = val != null && val !== '' && val !== false;
         let target = h.target;
@@ -1537,23 +1765,33 @@ function renderGrid(wrapId, habits, sectionType) {
           target = wg.morning_steps || h.target;
         }
         const hit = has && target && (h.id === 'calorie_goal' ? val <= target : val >= target);
+        logged = has;
         control = `<input type="number" class="num-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" placeholder="—" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />`;
       } else if (h.type === 'time') {
         const has = typeof val === 'string' && val.length > 0;
         const hit = has && h.target && val <= h.target;
+        logged = has;
         control = `<input type="text" inputmode="numeric" maxlength="5" placeholder="hh:mm" class="time-input ${has?'has-val':''} ${hit?'hit':''}" value="${has?val:''}" data-date="${ds}" data-habit="${h.id}" ${isFuture?'disabled':''} />`;
       } else {
         const done = !!val;
+        logged = done;
         control = `<div class="circle ${done?'done':''} ${isFuture?'future':''}" data-date="${ds}" data-habit="${h.id}"></div>`;
       }
-      html += `<div class="day-row">
+      if (logged) doneCount++;
+      html += `<div class="day-row ${logged ? 's-done' : ''}">
         <div class="name">${h.name}${h.hint ? `<div class="habit-hint">${h.hint}</div>` : ''}</div>
         <div class="streak">${dayStreakHtml}</div>
         <div class="control">${control}</div>
       </div>`;
     }
-    html += '</div>';
-    wrap.innerHTML = html;
+    const total = habits.length;
+    const pct = total ? Math.round(doneCount / total * 100) : 0;
+    const allDone = total && doneCount === total;
+    const progress = `<div class="day-progress">
+      <div class="dp-ring" style="--p:${pct}"><span>${doneCount}<i>/${total}</i></span></div>
+      <div class="dp-meta"><div class="dp-pct">${pct}% complete</div><div class="dp-sub">${allDone ? 'All done — beautiful.' : (total - doneCount) + ' to go today'}</div></div>
+    </div>`;
+    wrap.innerHTML = '<div class="day-list">' + progress + html + '</div>';
     attachCellHandlers(wrap);
     return;
   }
@@ -2255,11 +2493,11 @@ async function loadWeeklyTargetsFromReview() {
 
 // ---------- This Week's Priorities card ----------
 const STATUS_OPTIONS_WP = [
-  { value: 'not_started', label: 'not started' },
-  { value: 'completed',   label: 'completed' },
-  { value: 'incomplete',  label: 'incomplete' },
-  { value: 'postponed',   label: 'postponed' },
-  { value: 'killed',      label: 'killed' },
+  { value: 'not_started', label: 'To do',   sw: '#9ca3af' },
+  { value: 'completed',   label: 'Done',    sw: '#3f9a55' },
+  { value: 'incomplete',  label: 'Missed',  sw: '#8C1A2C' },
+  { value: 'postponed',   label: 'Later',   sw: '#8a6a1a' },
+  { value: 'killed',      label: 'Dropped', sw: '#9ca3af' },
 ];
 
 let wpGoals = []; // cached goal list for this week
@@ -2287,6 +2525,11 @@ function thisSundayStr() {
 }
 
 const WP_CATS = ['Work','Growth and Learning','Joyful Pursuits','Health','Family'];
+const STATUS_LABEL_WP = Object.fromEntries(STATUS_OPTIONS_WP.map(o => [o.value, o.label]));
+const WP_CAT_LABEL = { 'Work':'Work', 'Growth and Learning':'Growth & Learning', 'Joyful Pursuits':'Joyful Pursuits', 'Health':'Health', 'Family':'Family' };
+const WP_CAT_COLOR = { 'Work':'#4A8FD4', 'Growth and Learning':'#1A4A2A', 'Joyful Pursuits':'#C2A040', 'Health':'#8C1A2C', 'Family':'#196878' };
+// Gamification: XP derived from completed priorities; week-streak from localStorage history.
+const WP_GAME = { xpPerGoal: 10, baseXp: 0 };
 
 async function loadWeeklyPriorities() {
   const list = document.getElementById('wpList');
@@ -2381,34 +2624,135 @@ async function loadWeeklyPriorities() {
   }
 }
 
+// ----- Priorities card: helpers -----
+function wpEscape(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function wpCounted(){ return wpGoals.filter(g => g.goal && g.goal.trim() && g.status !== 'killed'); }
+function wpTally(){ const c = wpCounted(); return { done: c.filter(g => g.status === 'completed').length, total: c.length }; }
+function wpWeeklyXp(){ return WP_GAME.baseXp + wpGoals.filter(g => g.status === 'completed').length * WP_GAME.xpPerGoal; }
+function wpAreasCleared(){
+  let total = 0, done = 0;
+  WP_CATS.forEach(c => {
+    const it = wpGoals.filter(g => g.category === c && g.goal && g.goal.trim() && g.status !== 'killed');
+    if (it.length) { total++; if (it.every(g => g.status === 'completed')) done++; }
+  });
+  return { done, total };
+}
+function wpStreakWeeks(){
+  // Counts consecutive prior weeks (stepping back 7 days from wpWeekEnding)
+  // that have a saved wpStatus entry with ≥1 completed goal.
+  // Demo-grade: swap out for real streak logic if desired (see WP_GAME).
+  try {
+    if (!wpWeekEnding) return 0;
+    let streak = 0; const d = new Date(wpWeekEnding + 'T00:00:00');
+    for (let i = 0; i < 104; i++) {
+      const raw = localStorage.getItem('wpStatus_' + localYmd(d));
+      if (!raw) break;
+      let hit = false;
+      try { const p = JSON.parse(raw); if (p && p.v === 2 && Array.isArray(p.goals)) hit = p.goals.some(g => g.status === 'completed'); } catch {}
+      if (!hit) break;
+      streak++; d.setDate(d.getDate() - 7);
+    }
+    return streak;
+  } catch { return 0; }
+}
+const WP_BADGES = [
+  { id:'first',    icon:'🌱', name:'First Win',  earned:()=> wpGoals.some(g => g.status === 'completed') },
+  { id:'streak',   icon:'🔥', name:'On Fire',    earned:()=> wpStreakWeeks() >= 3 },
+  { id:'balanced', icon:'⚖️', name:'Balanced',   earned:()=> WP_CATS.every(c => wpGoals.some(g => g.category === c && g.status === 'completed')) },
+  { id:'finisher', icon:'🏆', name:'Finisher',   earned:()=> WP_CATS.some(c => { const it = wpGoals.filter(g => g.category === c && g.status !== 'killed'); return it.length && it.every(g => g.status === 'completed'); }) },
+  { id:'perfect',  icon:'👑', name:'Perfect Wk', earned:()=> { const t = wpTally(); return t.total > 0 && t.done === t.total; } },
+];
+let wpPrevPct = 0, wpEarnedIds = new Set(), wpBooted = false;
+
 function renderWpList() {
   const list = document.getElementById('wpList');
   if (!list) return;
   const goals = wpGoals.filter(g => g.goal && g.goal.trim());
   if (goals.length === 0) {
-    list.innerHTML = '<div class="wp-empty">No priorities this week yet.</div>';
+    list.innerHTML = '<div class="wp-empty">No priorities this week yet — <a href="weekly-review.html">go to Weekly Review →</a></div>';
     return;
   }
-  list.innerHTML = goals.map((g, i) => {
-    const cat = g.category || '—';
-    const status = g.status || 'not_started';
-    const opts = STATUS_OPTIONS_WP.map(o =>
-      `<option value="${o.value}"${o.value === status ? ' selected' : ''}>${o.label}</option>`
-    ).join('');
-    return `<div class="wp-row" data-idx="${i}">
-      <span class="wp-num">${i + 1}.</span>
-      <span class="wp-text">${g.goal}</span>
-      <span class="wp-cat" data-cat="${cat}">${cat}</span>
-      <select class="wp-status" data-value="${status}" data-idx="${i}">${opts}</select>
+  const { done, total } = wpTally();
+  const pct = total ? done / total : 0;
+  let msg;
+  if (done === 0) msg = 'A fresh week. Pick one and begin.';
+  else if (pct >= 1) msg = 'Every priority cleared. Remarkable week.';
+  else if (pct >= 0.66) msg = 'Strong momentum — bring it home.';
+  else if (pct >= 0.34) msg = 'Past halfway. Keep it rolling.';
+  else msg = 'Good start — small wins compound.';
+
+  const streak = wpStreakWeeks();
+  const areas = wpAreasCleared();
+  const firstStat = streak > 0
+    ? `<div class="wp-stat"><div class="v"><span class="flame">🔥</span>${streak}</div><div class="k">Week streak</div></div>`
+    : `<div class="wp-stat"><div class="v">${areas.done}<small>/${areas.total}</small></div><div class="k">Areas cleared</div></div>`;
+  const hero = `
+    <div class="wp-hero">
+      <div class="wp-ring">
+        <svg width="78" height="78" viewBox="0 0 78 78">
+          <circle class="track" cx="39" cy="39" r="33" fill="none" stroke-width="7"></circle>
+          <circle class="bar" cx="39" cy="39" r="33" fill="none" stroke-width="7"></circle>
+        </svg>
+        <div class="center"><span class="frac"><b>${done}</b>/${total}</span><span class="lbl">Done</span></div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-stats">
+          ${firstStat}
+          <div class="wp-stat"><div class="v"><span class="xp">${wpWeeklyXp()}</span></div><div class="k">XP this week</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="wp-hero-msg">${msg}</div>`;
+
+  const nowEarned = new Set(WP_BADGES.filter(b => b.earned()).map(b => b.id));
+  const badges = `<div class="wp-badges">${WP_BADGES.map(b => {
+    const earned = nowEarned.has(b.id);
+    const fresh = wpBooted && earned && !wpEarnedIds.has(b.id);
+    return `<div class="wp-badge ${earned ? 'earned' : 'locked'} ${fresh ? 'just-earned' : ''}"><div class="medal">${b.icon}</div><div class="nm">${b.name}</div></div>`;
+  }).join('')}</div>`;
+
+  const byCat = WP_CATS.map(key => ({
+    key,
+    items: wpGoals.map((g, i) => ({ g, i })).filter(x => x.g.category === key && x.g.goal && x.g.goal.trim())
+  })).filter(grp => grp.items.length);
+
+  const sections = byCat.map(({ key, items }) => {
+    const color = WP_CAT_COLOR[key] || '#7A7A7A';
+    const counted = items.filter(x => x.g.status !== 'killed');
+    const cdone = counted.filter(x => x.g.status === 'completed').length;
+    const allDone = counted.length > 0 && cdone === counted.length;
+    const pips = counted.map((x, k) => `<span class="pip ${k < cdone ? 'on' : ''}"></span>`).join('');
+    const rows = items.map(({ g, i }) => {
+      const status = g.status || 'not_started';
+      return `<div class="wp-goal s-${status}" data-idx="${i}">
+        <button class="wp-check" data-idx="${i}" aria-label="Toggle done"><svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button>
+        <span class="wp-goal-text">${wpEscape(g.goal)}</span>
+        <button class="wp-status" data-idx="${i}" data-value="${status}">${STATUS_LABEL_WP[status] || status}</button>
+      </div>`;
+    }).join('');
+    return `<div class="wp-cat ${allDone ? 'done' : ''}" style="--cat:${color}; --cat-tint:color-mix(in srgb, ${color} 6%, var(--panel))">
+      <div class="wp-cat-head"><span class="swatch"></span><span class="name">${WP_CAT_LABEL[key] || key}</span><span class="pips">${pips}</span><span class="count">${cdone}/${counted.length}</span><span class="crown">✦ Cleared</span></div>
+      <div class="wp-cat-body">${rows}</div>
     </div>`;
   }).join('');
+
+  list.innerHTML = hero + badges + '<div class="wp-groups">' + sections + '</div>';
+
+  const bar = list.querySelector('.wp-ring .bar');
+  if (bar) {
+    const C = 2 * Math.PI * 33;
+    bar.style.strokeDasharray = C;
+    bar.style.transition = 'none';
+    bar.style.strokeDashoffset = C * (1 - wpPrevPct);
+    requestAnimationFrame(() => { bar.style.transition = 'stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)'; bar.style.strokeDashoffset = C * (1 - pct); });
+  }
+  wpPrevPct = pct; wpEarnedIds = nowEarned; wpBooted = true;
 }
 
 function saveWpStatus(idx, newStatus) {
   if (!wpGoals[idx]) return;
   wpGoals[idx].status = newStatus;
-  // Save to localStorage keyed by the source week — no DB writes to weekly_reviews
-  // (that would create stub records that confuse the weekly review page).
+  // Save to localStorage keyed by the source week — no DB writes to weekly_reviews.
   // Versioned wrapper (v:2) lets us distinguish user-written statuses from old
   // legacy migration data (bare arrays) which gets discarded on load.
   try {
@@ -2416,14 +2760,67 @@ function saveWpStatus(idx, newStatus) {
   } catch (e) { /* fail silently */ }
 }
 
-// Wire up status change on the priorities card
-document.addEventListener('change', (e) => {
-  if (!e.target.classList.contains('wp-status')) return;
-  const idx = parseInt(e.target.dataset.idx);
-  const val = e.target.value;
-  e.target.dataset.value = val;
-  saveWpStatus(idx, val);
+// ----- Priorities card: tap interactions + juice -----
+let wpMenuIdx = null;
+function wpMenuEl(){ let m = document.getElementById('wpStatusMenu'); if (!m) { m = document.createElement('div'); m.id = 'wpStatusMenu'; m.className = 'wp-status-menu'; document.body.appendChild(m); } return m; }
+function wpOpenMenu(btn){
+  const menu = wpMenuEl(); wpMenuIdx = parseInt(btn.dataset.idx);
+  const cur = wpGoals[wpMenuIdx] ? wpGoals[wpMenuIdx].status : 'not_started';
+  menu.innerHTML = STATUS_OPTIONS_WP.map(o => `<button data-value="${o.value}" class="${o.value === cur ? 'active' : ''}"><span class="sw" style="background:${o.sw}"></span>${o.label}<span class="tick">✓</span></button>`).join('');
+  const r = btn.getBoundingClientRect(); menu.classList.add('open');
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  const left = Math.max(8, Math.min(r.right - mw, window.innerWidth - mw - 8));
+  let top = r.bottom + 6; if (top + mh > window.innerHeight - 8) top = r.top - mh - 6;
+  menu.style.left = left + 'px'; menu.style.top = top + 'px';
+}
+function wpCloseMenu(){ const m = document.getElementById('wpStatusMenu'); if (m) m.classList.remove('open'); wpMenuIdx = null; }
+function wpApplyStatus(idx, newStatus){
+  if (!wpGoals[idx]) return;
+  const prev = wpGoals[idx].status;
+  if (prev === newStatus) return;
+  const becameDone = newStatus === 'completed' && prev !== 'completed';
+  saveWpStatus(idx, newStatus);
+  renderWpList();
+  if (becameDone) {
+    const row = document.querySelector('.wp-goal[data-idx="' + idx + '"]');
+    if (row) {
+      row.classList.add('pop');
+      const check = row.querySelector('.wp-check');
+      const r = check.getBoundingClientRect();
+      wpBurst(r.left + r.width / 2, r.top + r.height / 2, WP_CAT_COLOR[wpGoals[idx].category] || '#C2A040');
+      wpFloatXp(r.right + 6, r.top);
+    }
+  }
+}
+// Tap handler: replaces the old <select> change listener.
+// Contracts preserved: class="wp-status", data-idx, data-value, saveWpStatus().
+document.addEventListener('click', (e) => {
+  const check = e.target.closest('.wp-check');
+  if (check) { const idx = parseInt(check.dataset.idx); wpApplyStatus(idx, wpGoals[idx] && wpGoals[idx].status === 'completed' ? 'not_started' : 'completed'); return; }
+  const pill = e.target.closest('.wp-status');
+  if (pill) { e.stopPropagation(); wpOpenMenu(pill); return; }
+  const opt = e.target.closest('.wp-status-menu button');
+  if (opt && wpMenuIdx !== null) { wpApplyStatus(wpMenuIdx, opt.dataset.value); wpCloseMenu(); return; }
+  if (!e.target.closest('.wp-status-menu')) wpCloseMenu();
 });
+window.addEventListener('resize', wpCloseMenu);
+window.addEventListener('scroll', wpCloseMenu, true);
+function wpBurst(x, y, accent){
+  const colors = [accent, '#C2A040', '#196878', '#F5F1E8'];
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('div'); s.className = 'wp-spark';
+    s.style.left = x + 'px'; s.style.top = y + 'px'; s.style.background = colors[i % colors.length];
+    if (i % 3 === 0) s.style.borderRadius = '50%';
+    document.body.appendChild(s);
+    const ang = (Math.PI * 2 * i) / 14 + Math.random() * 0.5; const dist = 34 + Math.random() * 40;
+    s.animate([{ transform:'translate(-50%,-50%) rotate(0deg)', opacity:1 }, { transform:`translate(calc(-50% + ${Math.cos(ang)*dist}px), calc(-50% + ${Math.sin(ang)*dist+24}px)) rotate(${Math.random()*360}deg)`, opacity:0 }], { duration: 650 + Math.random() * 250, easing:'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => s.remove();
+  }
+}
+function wpFloatXp(x, y){
+  const f = document.createElement('div'); f.className = 'wp-xp-float'; f.textContent = '+' + WP_GAME.xpPerGoal + ' XP';
+  f.style.left = x + 'px'; f.style.top = y + 'px'; document.body.appendChild(f);
+  f.animate([{ transform:'translateY(0)', opacity:0 }, { transform:'translateY(-6px)', opacity:1, offset:0.25 }, { transform:'translateY(-30px)', opacity:0 }], { duration:1000, easing:'ease-out' }).onfinish = () => f.remove();
+}
 
 // ---------- Memento Mori ----------
 function renderMementoMori() {
@@ -2509,6 +2906,7 @@ function clearBirthday() {
 
 function renderAll() {
   renderHeader();
+  document.body.setAttribute('data-view', viewMode);
   // Toggle tracker vs overview
   const isOverview = viewMode === 'overview';
   document.getElementById('trackerView').style.display = isOverview ? 'none' : 'block';
