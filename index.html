@@ -2345,30 +2345,28 @@ async function loadWeeklyPriorities() {
       }
     } catch { wpGoals = []; }
 
-    // 2. Restore saved statuses — check localStorage first, then fall back to
-    //    the legacy Supabase record (one-time migration from old save approach)
+    // 2. Restore saved statuses from localStorage.
+    //    We use a versioned wrapper { v: 2, goals: [...] } so we can tell the difference
+    //    between statuses the USER set (v:2) and old data written by the legacy migration
+    //    (bare array, no version). Bare arrays are discarded and cleared automatically.
     let statusSource = null;
     try {
       const ls = localStorage.getItem(`wpStatus_${wpWeekEnding}`);
-      if (ls) statusSource = JSON.parse(ls);
+      if (ls) {
+        const parsed = JSON.parse(ls);
+        if (parsed && parsed.v === 2 && Array.isArray(parsed.goals)) {
+          statusSource = parsed.goals; // user-written, safe to use
+        } else {
+          // Old format (bare array) — likely legacy migration data, discard it
+          localStorage.removeItem(`wpStatus_${wpWeekEnding}`);
+        }
+      }
     } catch { /* ignore */ }
 
-    if (!statusSource) {
-      // Legacy: check if statuses were saved to the upcoming week's weekly_reviews record
-      try {
-        const nextSun = thisSundayStr();
-        const { data: legacy } = await sb
-          .from('weekly_reviews')
-          .select('goals_last_week')
-          .eq('week_ending', nextSun)
-          .maybeSingle();
-        if (legacy?.goals_last_week) {
-          statusSource = JSON.parse(legacy.goals_last_week);
-          // Migrate to localStorage so we stop reading from weekly_reviews
-          localStorage.setItem(`wpStatus_${wpWeekEnding}`, JSON.stringify(statusSource));
-        }
-      } catch { /* ignore */ }
-    }
+    // (Legacy DB fallback removed — goals_last_week is now used by the weekly review's
+    // Q2 section for grading last week's goals, so reading it here caused old "killed"/
+    // "completed" Q2 grades to bleed through as tracker statuses. Tracker statuses are
+    // always stored in localStorage now.)
 
     if (statusSource) {
       wpGoals = wpGoals.map(g => {
@@ -2410,9 +2408,11 @@ function saveWpStatus(idx, newStatus) {
   if (!wpGoals[idx]) return;
   wpGoals[idx].status = newStatus;
   // Save to localStorage keyed by the source week — no DB writes to weekly_reviews
-  // (that would create stub records that confuse the weekly review page)
+  // (that would create stub records that confuse the weekly review page).
+  // Versioned wrapper (v:2) lets us distinguish user-written statuses from old
+  // legacy migration data (bare arrays) which gets discarded on load.
   try {
-    localStorage.setItem(`wpStatus_${wpWeekEnding}`, JSON.stringify(wpGoals));
+    localStorage.setItem(`wpStatus_${wpWeekEnding}`, JSON.stringify({ v: 2, goals: wpGoals }));
   } catch (e) { /* fail silently */ }
 }
 
