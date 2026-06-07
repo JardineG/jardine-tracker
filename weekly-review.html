@@ -546,6 +546,62 @@
   .past-item:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
   .banner { border-radius: 12px; }
   .footer { border-top: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); margin-top: 44px; }
+
+  /* ── Q2 real-time routing ── */
+  /* Routed rows stay in DOM for save collection but disappear from view */
+  .goal-row.q2-routed { display: none; }
+
+  /* Live-routed cards shown in archive / postponed sections before save */
+  .live-routed-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .live-routed-item.lr-completed {
+    background: color-mix(in srgb, #3f9a55 6%, var(--panel));
+    border-color: color-mix(in srgb, #3f9a55 30%, var(--line));
+  }
+  .live-routed-item.lr-postponed {
+    background: color-mix(in srgb, var(--gold) 8%, var(--panel));
+    border-color: color-mix(in srgb, var(--gold) 30%, var(--line));
+  }
+  .live-routed-item .lr-text {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .live-routed-item .lr-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .live-routed-item .lr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .03em;
+  }
+  .lr-badge.lb-completed { background: color-mix(in srgb, #3f9a55 15%, var(--panel)); color: #3f9a55; }
+  .lr-badge.lb-postponed { background: color-mix(in srgb, var(--gold) 15%, var(--panel)); color: color-mix(in srgb, var(--gold) 80%, #000); }
+  .live-notice {
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+    padding: 2px 0 10px;
+  }
 </style>
 </head>
 <body>
@@ -1354,7 +1410,7 @@ async function loadPostponedProjects() {
 
   const items = Array.from(seen.values());
   if (items.length === 0) {
-    list.innerHTML = `<div class="postponed-empty">Nothing postponed yet.</div>`;
+    list.innerHTML = `<div class="postponed-empty" data-empty-state>Nothing postponed yet.</div>`;
     return;
   }
 
@@ -1463,7 +1519,7 @@ async function loadCompletedArchive() {
   });
 
   if (rows.length === 0) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">No completed priorities yet — they appear here once marked completed in Q2.</div>';
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;" data-empty-state>No completed priorities yet — they appear here once marked completed in Q2.</div>';
     return;
   }
 
@@ -1477,6 +1533,91 @@ async function loadCompletedArchive() {
       </tr>`).join('')}
     </tbody>
   </table>`;
+}
+
+// ---------- Q2 real-time routing ----------
+// Returns a short week label for Q2 items (the week currently being reviewed).
+function q2WeekLabel() {
+  const monday = new Date(currentSunday);
+  monday.setDate(monday.getDate() - 6);
+  const fmt = { month: 'short', day: 'numeric' };
+  const yr = currentSunday.getFullYear();
+  return `${monday.toLocaleDateString(undefined, fmt)} – ${currentSunday.toLocaleDateString(undefined, fmt)}, ${yr}`;
+}
+
+// Hide a Q2 row and add a live card to the archive or postponed section.
+// Called every time a Q2 status dropdown changes.
+// The row stays in the DOM (display:none) so collectAnswers() still captures it.
+function routeQ2Row(row, status) {
+  const goalText = (row.querySelector('.goal-input')?.value || '').trim();
+  const cat = row.querySelector('.goal-cat-pill')?.dataset.cat || '';
+
+  // Stable per-row ID used to clean up previously-added live cards on re-change
+  if (!row.dataset.liveId) row.dataset.liveId = Math.random().toString(36).slice(2, 10);
+  const rowId = row.dataset.liveId;
+
+  // Remove any live cards from a previous routing of this same row
+  document.querySelectorAll(`[data-live-row="${rowId}"]`).forEach(el => el.remove());
+
+  if (status === 'completed' || status === 'done') {
+    row.classList.add('q2-routed');
+    if (!goalText) return;
+
+    const catKey = cat === 'Growth and Learning' ? 'Growth'
+                 : cat === 'Joyful Pursuits'     ? 'Joy'
+                 : cat || '';
+    const catPill = catKey
+      ? `<span class="archive-cat-pill ${catKey}" style="vertical-align:middle">${escapeHtml(cat)}</span>`
+      : '';
+
+    const el = document.getElementById('archiveList');
+    if (el) {
+      // Remove empty-state placeholder if present
+      el.querySelectorAll('[data-empty-state]').forEach(n => n.remove());
+      const card = document.createElement('div');
+      card.className = 'live-routed-item lr-completed';
+      card.dataset.liveRow = rowId;
+      card.innerHTML = `
+        <div style="flex:1;min-width:0">
+          <div class="lr-text">${escapeHtml(goalText)}</div>
+          <div class="lr-meta">
+            <span class="lr-badge lb-completed">✓ Week made</span>
+            ${catPill}
+            <span>${escapeHtml(q2WeekLabel())}</span>
+          </div>
+        </div>`;
+      el.prepend(card);
+    }
+
+  } else if (status === 'killed') {
+    row.classList.add('q2-routed');
+    // No archive — it just disappears. No card added.
+
+  } else if (status === 'postponed') {
+    row.classList.add('q2-routed');
+    if (!goalText) return;
+
+    const el = document.getElementById('postponedList');
+    if (el) {
+      el.querySelectorAll('[data-empty-state]').forEach(n => n.remove());
+      const card = document.createElement('div');
+      card.className = 'live-routed-item lr-postponed';
+      card.dataset.liveRow = rowId;
+      card.innerHTML = `
+        <div style="flex:1;min-width:0">
+          <div class="lr-text">${escapeHtml(goalText)}</div>
+          <div class="lr-meta">
+            <span class="lr-badge lb-postponed">↷ Week made</span>
+            <span>${escapeHtml(q2WeekLabel())}</span>
+          </div>
+        </div>`;
+      el.prepend(card);
+    }
+
+  } else {
+    // incomplete or not_started → un-hide the row
+    row.classList.remove('q2-routed');
+  }
 }
 
 // ---------- Wire up ----------
@@ -1636,7 +1777,8 @@ document.addEventListener('change', (e) => {
 });
 
 // Status dropdown: keep data-value in sync so CSS can color it.
-// Also: when a Q2 goal is marked "incomplete" or "not_started", push it into Q5 automatically.
+// Q2 changes: route completed→archive, killed→disappear, postponed→postponed section,
+// incomplete/not_started→show in Q2 and push into Q5 matrix.
 document.addEventListener('change', (e) => {
   if (!e.target.classList.contains('goal-status')) return;
   e.target.dataset.value = e.target.value;
@@ -1651,31 +1793,32 @@ document.addEventListener('change', (e) => {
   const cat = row.querySelector('.goal-cat-pill')?.dataset.cat || '';
   const newStatus = e.target.value;
 
+  // ── Route the row to archive / postponed / hidden based on status ──
+  routeQ2Row(row, newStatus);
+
   if (newStatus === 'incomplete' || newStatus === 'not_started') {
     // Add to Q5 matrix if not already there
     const matrixCat = PRIORITY_CATS.includes(cat) ? cat : 'Work';
     const body = document.querySelector(`.pm-col-body[data-cat="${matrixCat}"]`);
-    if (!body) return;
-
-    // Check if already in Q5
-    const already = Array.from(body.querySelectorAll('textarea'))
-      .some(t => t.value.trim() === goalText);
-    if (already || !goalText) return;
-
-    // Find first empty row or append a new one
-    const emptyTA = Array.from(body.querySelectorAll('textarea'))
-      .find(t => !t.value.trim());
-    if (emptyTA) {
-      emptyTA.value = goalText;
-      emptyTA.dispatchEvent(new Event('input')); // trigger auto-resize
-    } else {
-      const idx = body.querySelectorAll('.pm-item').length + 1;
-      const newItem = document.createElement('div');
-      newItem.className = 'pm-item';
-      newItem.innerHTML = `<span class="pm-num">${idx}.</span><textarea class="auto-grow" rows="1"></textarea>`;
-      newItem.querySelector('textarea').value = goalText;
-      body.appendChild(newItem);
-      autoGrowAll(body);
+    if (body && goalText) {
+      const already = Array.from(body.querySelectorAll('textarea'))
+        .some(t => t.value.trim() === goalText);
+      if (!already) {
+        const emptyTA = Array.from(body.querySelectorAll('textarea'))
+          .find(t => !t.value.trim());
+        if (emptyTA) {
+          emptyTA.value = goalText;
+          emptyTA.dispatchEvent(new Event('input'));
+        } else {
+          const idx = body.querySelectorAll('.pm-item').length + 1;
+          const newItem = document.createElement('div');
+          newItem.className = 'pm-item';
+          newItem.innerHTML = `<span class="pm-num">${idx}.</span><textarea class="auto-grow" rows="1"></textarea>`;
+          newItem.querySelector('textarea').value = goalText;
+          body.appendChild(newItem);
+          autoGrowAll(body);
+        }
+      }
     }
 
     // Flash the Q5 card so user notices it was updated
@@ -1686,7 +1829,7 @@ document.addEventListener('change', (e) => {
       setTimeout(() => { q5Card.style.boxShadow = ''; }, 1200);
     }
   } else {
-    // Status changed away from incomplete — remove from Q5 if it's there and not done
+    // Status changed away from incomplete/not_started — remove from Q5 if it was auto-added
     const matrixCat = PRIORITY_CATS.includes(cat) ? cat : 'Work';
     const body = document.querySelector(`.pm-col-body[data-cat="${matrixCat}"]`);
     if (body && goalText) {
