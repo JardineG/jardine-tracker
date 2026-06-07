@@ -272,6 +272,19 @@
     min-height: 32px; line-height: 1.35; display: block;
   }
   .pm-item textarea:focus { outline: none; border-color: var(--gold); }
+  /* Week-origin tag for Q2→Q5 auto-added items */
+  .pm-item[data-q2-week] { flex-wrap: wrap; }
+  .pm-item[data-q2-week]::after {
+    content: "↩ from " attr(data-q2-week);
+    display: block;
+    width: 100%;
+    padding-left: 19px; /* aligns under textarea (14px num + 5px gap) */
+    font-size: 10px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
   .pm-add {
     background: transparent; border: 1px dashed var(--line); border-radius: 5px;
     padding: 4px; cursor: pointer; font-size: 10px; color: var(--muted);
@@ -905,10 +918,12 @@ function syncQ2IncompleteToQ5() {
     if (emptyTA) {
       emptyTA.value = goalText;
       emptyTA.dispatchEvent(new Event('input'));
+      emptyTA.closest('.pm-item').dataset.q2Week = q2WeekLabel();
     } else {
       const idx = body.querySelectorAll('.pm-item').length + 1;
       const newItem = document.createElement('div');
       newItem.className = 'pm-item';
+      newItem.dataset.q2Week = q2WeekLabel();
       newItem.innerHTML = `<span class="pm-num">${idx}.</span><textarea class="auto-grow" rows="1"></textarea>`;
       newItem.querySelector('textarea').value = goalText;
       body.appendChild(newItem);
@@ -1809,10 +1824,12 @@ document.addEventListener('change', (e) => {
         if (emptyTA) {
           emptyTA.value = goalText;
           emptyTA.dispatchEvent(new Event('input'));
+          emptyTA.closest('.pm-item').dataset.q2Week = q2WeekLabel();
         } else {
           const idx = body.querySelectorAll('.pm-item').length + 1;
           const newItem = document.createElement('div');
           newItem.className = 'pm-item';
+          newItem.dataset.q2Week = q2WeekLabel();
           newItem.innerHTML = `<span class="pm-num">${idx}.</span><textarea class="auto-grow" rows="1"></textarea>`;
           newItem.querySelector('textarea').value = goalText;
           body.appendChild(newItem);
