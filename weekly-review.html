@@ -1003,7 +1003,16 @@ async function loadReview(sundayDate) {
     return;
   }
 
-  currentReview = data ? mergeIncompletesIntoQ5(data) : data;
+  // Only auto-merge last week's incompletes into Q5 if the user hasn't
+  // manually set any Q5 priorities yet. Once Q5 has real content, respect it.
+  const q5AlreadySet = (() => {
+    if (!data || !data.next_priorities) return false;
+    try {
+      const m = JSON.parse(data.next_priorities);
+      return PRIORITY_CATS.some(c => Array.isArray(m[c]) && m[c].length > 0);
+    } catch { return false; }
+  })();
+  currentReview = (data && !q5AlreadySet) ? mergeIncompletesIntoQ5(data) : data;
   fillAnswers(currentReview);
   fillTargets(currentReview);
 
