@@ -2292,32 +2292,39 @@ async function loadWeeklyPriorities() {
   const list = document.getElementById('wpList');
   if (!list) return;
 
-  wpWeekEnding = lastSundayStr(); // the review that has next_priorities for this week
+  wpWeekEnding = lastSundayStr(); // default: last Sunday
 
   try {
-    // 1. Load next_priorities — check last Sunday first, then next Sunday as fallback
-    //    (priorities may be saved to the upcoming week's review if set mid-week)
+    // 1. Load next_priorities — prefer this Sunday's review (the one the user
+    //    just filled in Q5 for next week) over last Sunday's stale priorities.
+    //    This means as soon as you save your weekly review with new Q5 priorities,
+    //    the tracker card switches immediately — no need to wait until Sunday.
     let data, error;
-    ({ data, error } = await sb
-      .from('weekly_reviews')
-      .select('next_priorities')
-      .eq('week_ending', wpWeekEnding)
-      .maybeSingle());
+    const thisSunday = thisSundayStr();
+    const lastSunday = lastSundayStr();
 
-    if ((error || !data || !data.next_priorities)) {
-      // Fallback: check next Sunday's review (user may have saved there)
-      const nextSundayFallback = thisSundayStr();
-      if (nextSundayFallback !== wpWeekEnding) {
-        const { data: d2, error: e2 } = await sb
-          .from('weekly_reviews')
-          .select('next_priorities')
-          .eq('week_ending', nextSundayFallback)
-          .maybeSingle();
-        if (!e2 && d2 && d2.next_priorities) {
-          data = d2;
-          wpWeekEnding = nextSundayFallback; // use this key for status storage too
-        }
+    // Check this/upcoming Sunday first
+    if (thisSunday !== lastSunday) {
+      ({ data, error } = await sb
+        .from('weekly_reviews')
+        .select('next_priorities')
+        .eq('week_ending', thisSunday)
+        .maybeSingle());
+      if (!error && data && data.next_priorities) {
+        wpWeekEnding = thisSunday; // statuses stored under this key
+      } else {
+        data = null; // fall through to last Sunday
       }
+    }
+
+    // Fall back to last Sunday if this Sunday has nothing
+    if (!data || !data.next_priorities) {
+      ({ data, error } = await sb
+        .from('weekly_reviews')
+        .select('next_priorities')
+        .eq('week_ending', lastSunday)
+        .maybeSingle());
+      wpWeekEnding = lastSunday;
     }
 
     if (!data || !data.next_priorities) {
