@@ -272,13 +272,26 @@
     min-height: 32px; line-height: 1.35; display: block;
   }
   .pm-item textarea:focus { outline: none; border-color: var(--gold); }
-  /* Week-origin tag for Q2→Q5 auto-added items */
+  /* "When made" date tag — shown on every Q5 item */
+  .pm-item[data-added-label] { flex-wrap: wrap; }
+  .pm-item[data-added-label]::after {
+    content: attr(data-added-label);
+    display: block;
+    width: 100%;
+    padding-left: 19px;
+    font-size: 10px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+  /* Q2→Q5 auto-rolled items: override date label with origin-week text */
   .pm-item[data-q2-week] { flex-wrap: wrap; }
   .pm-item[data-q2-week]::after {
     content: "↩ from " attr(data-q2-week);
     display: block;
     width: 100%;
-    padding-left: 19px; /* aligns under textarea (14px num + 5px gap) */
+    padding-left: 19px;
     font-size: 10px;
     color: var(--muted);
     font-style: italic;
@@ -806,6 +819,29 @@ function escapeHtml(s) {
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// Normalize a raw matrix item (string or {text,added} object) to {text,added}.
+// Returns null if the item has no usable text.
+function normMatrixItem(item) {
+  if (typeof item === 'string') {
+    const t = item.trim();
+    return t ? { text: t, added: null } : null;
+  }
+  if (item && typeof item === 'object' && typeof item.text === 'string' && item.text.trim()) {
+    return { text: item.text.trim(), added: item.added || null };
+  }
+  return null;
+}
+
+// Stamp a "when made" date (ISO YYYY-MM-DD) on a .pm-item div.
+// Skips if the item already has a date (don't overwrite user-entered dates).
+function stampAdded(pmItem, isoDate) {
+  if (!isoDate) return;
+  if (pmItem.dataset.added) return; // already stamped
+  pmItem.dataset.added = isoDate;
+  const d = new Date(isoDate + 'T00:00:00');
+  pmItem.dataset.addedLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 // Scan Q2 (priorities + status) and surface any not_started/incomplete items
 // at the top of Q5 so unfinished work auto-rolls into next week's plan.
 
@@ -898,6 +934,7 @@ function enterEditMode() {
 
 // Scans all Q2 rows and ensures any marked "incomplete" or "not_started" are present in Q5.
 function syncQ2IncompleteToQ5() {
+  const lastSunStr = (() => { const d = new Date(currentSunday); d.setDate(d.getDate() - 7); return ymd(d); })();
   const q2Rows = document.querySelectorAll('.q-goals[data-key="goals_last_week"] .goal-row');
   q2Rows.forEach(row => {
     const status = row.querySelector('.goal-status')?.value;
@@ -918,12 +955,15 @@ function syncQ2IncompleteToQ5() {
     if (emptyTA) {
       emptyTA.value = goalText;
       emptyTA.dispatchEvent(new Event('input'));
-      emptyTA.closest('.pm-item').dataset.q2Week = q2WeekLabel();
+      const pmItem = emptyTA.closest('.pm-item');
+      pmItem.dataset.q2Week = q2WeekLabel();
+      stampAdded(pmItem, lastSunStr);
     } else {
       const idx = body.querySelectorAll('.pm-item').length + 1;
       const newItem = document.createElement('div');
       newItem.className = 'pm-item';
       newItem.dataset.q2Week = q2WeekLabel();
+      stampAdded(newItem, lastSunStr);
       newItem.innerHTML = `<span class="pm-num">${idx}.</span><textarea class="auto-grow" rows="1"></textarea>`;
       newItem.querySelector('textarea').value = goalText;
       body.appendChild(newItem);
@@ -940,7 +980,10 @@ function renderWeekPlanCard() {
   }
   let matrix = {};
   try { matrix = JSON.parse(currentReview.next_priorities); } catch {}
-  const activeCats = PRIORITY_CATS.filter(c => (matrix[c] || []).filter(Boolean).length > 0);
+  // Support both legacy string arrays and new {text,added} object arrays
+  const normMatrix = {};
+  PRIORITY_CATS.forEach(c => { normMatrix[c] = (matrix[c] || []).map(normMatrixItem).filter(Boolean); });
+  const activeCats = PRIORITY_CATS.filter(c => normMatrix[c].length > 0);
   if (activeCats.length === 0) { card.style.display = 'none'; return; }
 
   card.style.display = '';
@@ -956,10 +999,10 @@ function renderWeekPlanCard() {
         <div>
           <div class="wpc-col-head" style="background:${CAT_COLORS[cat]}">${cat}</div>
           <div class="wpc-col-body">
-            ${(matrix[cat] || []).filter(Boolean).map(item => `
+            ${normMatrix[cat].map(item => `
               <div class="wpc-item">
                 <span class="wpc-dot">•</span>
-                <span class="wpc-text">${item}</span>
+                <span class="wpc-text">${escapeHtml(item.text)}</span>
               </div>
             `).join('')}
           </div>
@@ -973,28 +1016,41 @@ function parseMatrixValue(value) {
   if (!value) return {};
   try {
     const parsed = JSON.parse(value);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      // Normalize all items to {text, added} form (handles legacy strings and new objects)
+      const out = {};
+      Object.keys(parsed).forEach(cat => {
+        out[cat] = (parsed[cat] || []).map(normMatrixItem).filter(Boolean);
+      });
+      return out;
+    }
   } catch {}
   // Legacy: plain newline list → put all under Work
   const lines = value.split('\n').map(s => s.trim()).filter(Boolean);
-  return lines.length ? { Work: lines } : {};
+  return lines.length ? { Work: lines.map(t => ({ text: t, added: null })) } : {};
 }
 
 function setMatrixRows(key, data) {
-  // data: { "Work": ["item1","item2"], ... }
+  // data: { "Work": [{text, added} | string, ...], ... }
   const matrix = document.querySelector(`.priority-matrix[data-key="${key}"]`);
   if (!matrix) return;
+  const fallbackDate = ymd(currentSunday); // used for legacy items with no stored date
   PRIORITY_CATS.forEach(cat => {
     const body = matrix.querySelector(`.pm-col-body[data-cat="${cat}"]`);
     if (!body) return;
-    const items = (data[cat] || []).filter(Boolean);
+    // Normalize to {text, added} objects
+    const items = (data[cat] || []).map(normMatrixItem).filter(Boolean);
     const numRows = Math.max(items.length, 2);
     body.innerHTML = '';
     for (let i = 0; i < numRows; i++) {
+      const item = items[i];
       const row = document.createElement('div');
       row.className = 'pm-item';
       row.innerHTML = `<span class="pm-num">${i+1}.</span><textarea class="auto-grow" rows="1" placeholder="${i===0?'Add priority…':''}"></textarea>`;
-      if (items[i]) row.querySelector('textarea').value = items[i];
+      if (item) {
+        row.querySelector('textarea').value = item.text;
+        stampAdded(row, item.added || fallbackDate);
+      }
       body.appendChild(row);
     }
     autoGrowAll(body);
@@ -1004,10 +1060,16 @@ function setMatrixRows(key, data) {
 function collectMatrixValue(key) {
   const matrix = document.querySelector(`.priority-matrix[data-key="${key}"]`);
   if (!matrix) return '';
+  const today = ymd(new Date());
   const out = {};
   PRIORITY_CATS.forEach(cat => {
-    const fields = matrix.querySelectorAll(`.pm-col-body[data-cat="${cat}"] textarea`);
-    out[cat] = Array.from(fields).map(f => f.value.trim()).filter(Boolean);
+    const items = [];
+    matrix.querySelectorAll(`.pm-col-body[data-cat="${cat}"] .pm-item`).forEach(pmItem => {
+      const text = pmItem.querySelector('textarea')?.value.trim();
+      if (!text) return;
+      items.push({ text, added: pmItem.dataset.added || today });
+    });
+    out[cat] = items;
   });
   const hasAny = Object.values(out).some(arr => arr.length > 0);
   return hasAny ? JSON.stringify(out) : '';
@@ -1749,9 +1811,16 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Auto-grow textareas as the user types; refresh postponed checkmarks when Q5 changes.
+// Auto-grow textareas as the user types; stamp date on new Q5 entries; refresh postponed checkmarks.
 document.addEventListener('input', (e) => {
   if (e.target.classList && e.target.classList.contains('auto-grow')) autoGrow(e.target);
+
+  // Stamp today's date on a Q5 pm-item the first time the user types into it
+  const pmItem = e.target.closest && e.target.closest('.priority-matrix[data-key="next_priorities"] .pm-item');
+  if (pmItem && e.target.value.trim() && !pmItem.dataset.added) {
+    stampAdded(pmItem, ymd(new Date()));
+  }
+
   if (e.target.closest && (e.target.closest('.q-list[data-key="next_priorities"]') || e.target.closest('.priority-matrix[data-key="next_priorities"]'))) refreshPostponedChecked();
 });
 
@@ -1815,6 +1884,7 @@ document.addEventListener('change', (e) => {
     // Add to Q5 matrix if not already there
     const matrixCat = PRIORITY_CATS.includes(cat) ? cat : 'Work';
     const body = document.querySelector(`.pm-col-body[data-cat="${matrixCat}"]`);
+    const lastSunStr = (() => { const d = new Date(currentSunday); d.setDate(d.getDate() - 7); return ymd(d); })();
     if (body && goalText) {
       const already = Array.from(body.querySelectorAll('textarea'))
         .some(t => t.value.trim() === goalText);
@@ -1824,12 +1894,15 @@ document.addEventListener('change', (e) => {
         if (emptyTA) {
           emptyTA.value = goalText;
           emptyTA.dispatchEvent(new Event('input'));
-          emptyTA.closest('.pm-item').dataset.q2Week = q2WeekLabel();
+          const pmItem = emptyTA.closest('.pm-item');
+          pmItem.dataset.q2Week = q2WeekLabel();
+          stampAdded(pmItem, lastSunStr);
         } else {
           const idx = body.querySelectorAll('.pm-item').length + 1;
           const newItem = document.createElement('div');
           newItem.className = 'pm-item';
           newItem.dataset.q2Week = q2WeekLabel();
+          stampAdded(newItem, lastSunStr);
           newItem.innerHTML = `<span class="pm-num">${idx}.</span><textarea class="auto-grow" rows="1"></textarea>`;
           newItem.querySelector('textarea').value = goalText;
           body.appendChild(newItem);
