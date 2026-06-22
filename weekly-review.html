@@ -1319,14 +1319,15 @@ async function prefillGoalsFromLastWeek(sundayDate) {
 
   if (error || !data || !data.next_priorities) return;
 
-  // Parse new matrix format { "Work": ["item",...], ... } or legacy newline list
+  // Parse new matrix format { "Work": ["item"|{text,added},...], ... } or legacy newline list
   let goals = [];
   try {
     const matrix = JSON.parse(data.next_priorities);
     if (matrix && typeof matrix === 'object' && !Array.isArray(matrix)) {
       PRIORITY_CATS.forEach(cat => {
         (matrix[cat] || []).filter(Boolean).forEach(g => {
-          goals.push({ goal: g, status: 'not_started', category: cat });
+          const text = typeof g === 'string' ? g : (g.text || '');
+          if (text.trim()) goals.push({ goal: text.trim(), status: 'not_started', category: cat });
         });
       });
     }
@@ -1385,7 +1386,10 @@ async function prefillIncompleteIntoNextWeek(sundayDate) {
       const matrix = JSON.parse(data.next_priorities);
       if (matrix && typeof matrix === 'object' && !Array.isArray(matrix)) {
         PRIORITY_CATS.forEach(cat => {
-          (matrix[cat] || []).filter(Boolean).forEach(g => rawGoals.push({ goal: g, category: cat }));
+          (matrix[cat] || []).filter(Boolean).forEach(g => {
+            const text = typeof g === 'string' ? g : (g.text || '');
+            if (text.trim()) rawGoals.push({ goal: text.trim(), category: cat });
+          });
         });
       }
     } catch {}

@@ -2575,14 +2575,16 @@ async function loadWeeklyPriorities() {
       return;
     }
 
-    // Parse matrix format: { "Work": ["item1", ...], ... }
+    // Parse matrix format: { "Work": ["item1"|{text,added}, ...], ... }
     wpGoals = [];
     try {
       const matrix = JSON.parse(data.next_priorities);
       if (matrix && typeof matrix === 'object' && !Array.isArray(matrix)) {
         WP_CATS.forEach(cat => {
           (matrix[cat] || []).filter(Boolean).forEach(item => {
-            wpGoals.push({ goal: item, category: cat, status: 'not_started' });
+            // Support both legacy string format and new {text, added} object format
+            const goalText = typeof item === 'string' ? item : (item.text || '');
+            if (goalText.trim()) wpGoals.push({ goal: goalText, category: cat, status: 'not_started' });
           });
         });
       }
