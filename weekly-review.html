@@ -884,7 +884,8 @@ function setGoalRows(key, goalObjects) {
         ${STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
       </select>
     `;
-    const goalStr = typeof item.goal === 'string' ? item.goal : (item.goal?.text || '');
+    const rawGoal = typeof item.goal === 'string' ? item.goal : (item.goal?.text || '');
+    const goalStr = (rawGoal === '[object Object]' || rawGoal.startsWith('[object ')) ? '' : rawGoal;
     row.querySelector('.goal-input').value = goalStr;
     const sel = row.querySelector('.goal-status');
     sel.value = status;
@@ -899,12 +900,12 @@ function parseGoalsValue(value) {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) return parsed.map(g => ({
-      ...g,
-      // Normalize goal to string in case it was saved as a {text,added} object (data migration safety)
-      goal: typeof g.goal === 'string' ? g.goal : (g.goal?.text || ''),
-      status: g.status === 'done' ? 'completed' : g.status,
-    }));
+    if (Array.isArray(parsed)) return parsed.map(g => {
+      const raw = typeof g.goal === 'string' ? g.goal : (g.goal?.text || '');
+      // Strip "[object Object]" strings saved during the data-migration bug
+      const goal = (raw === '[object Object]' || raw.startsWith('[object ')) ? '' : raw;
+      return { ...g, goal, status: g.status === 'done' ? 'completed' : g.status };
+    });
   } catch {}
   return value.split('\n').map(s => s.trim()).filter(Boolean)
     .map(g => ({ goal: g, status: 'not_started', category: '' }));
