@@ -884,7 +884,8 @@ function setGoalRows(key, goalObjects) {
         ${STATUS_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
       </select>
     `;
-    row.querySelector('.goal-input').value = item.goal || '';
+    const goalStr = typeof item.goal === 'string' ? item.goal : (item.goal?.text || '');
+    row.querySelector('.goal-input').value = goalStr;
     const sel = row.querySelector('.goal-status');
     sel.value = status;
     container.appendChild(row);
@@ -900,6 +901,8 @@ function parseGoalsValue(value) {
     const parsed = JSON.parse(value);
     if (Array.isArray(parsed)) return parsed.map(g => ({
       ...g,
+      // Normalize goal to string in case it was saved as a {text,added} object (data migration safety)
+      goal: typeof g.goal === 'string' ? g.goal : (g.goal?.text || ''),
       status: g.status === 'done' ? 'completed' : g.status,
     }));
   } catch {}
